@@ -7,7 +7,6 @@
 [![Dart](https://img.shields.io/badge/Dart-3.7.0-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
 [![Supabase](https://img.shields.io/badge/Supabase-BaaS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 [![Riverpod](https://img.shields.io/badge/State_Management-Riverpod_2.6-055399?style=for-the-badge&logo=flutter&logoColor=white)](https://riverpod.dev)
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
 ---
 
@@ -132,9 +131,3 @@ Hệ thống tận dụng tối đa tính năng của **Supabase PostgreSQL**:
 * **Edge Functions**:
   * `parse-intent`: Tiếp nhận câu thoại tiếng Việt, trích xuất Intent (`query_stock`, `create_order`) và Entities dưới dạng JSON.
   * `query-stock`: Thực hiện truy vấn tồn kho thông minh và sinh câu trả lời tự nhiên.
-
----
-
-## 📜 Giấy Phép (License)
-
-Dự án được phân phối dưới giấy phép **MIT License**. Xem thêm thông tin chi tiết tại file `LICENSE`.
