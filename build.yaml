@@ -1,0 +1,24 @@
+targets:
+  $default:
+    builders:
+      freezed:
+        generate_for:
+          include:
+            - lib/features/**/models/*.dart
+            - lib/features/**/entities/*.dart
+            - lib/features/**/states/*.dart
+            - lib/core/errors/*.dart
+      json_serializable:
+        generate_for:
+          include:
+            - lib/features/**/models/*.dart
+        options:
+          explicit_to_json: true
+          field_rename: snake
+      riverpod_generator:
+        generate_for:
+          include:
+            - lib/core/network/*.dart
+            - lib/app/router/*.dart
+            - lib/features/**/controllers/*.dart
+
