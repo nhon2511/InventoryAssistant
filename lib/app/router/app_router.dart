@@ -20,7 +20,7 @@ import 'package:smart_wms/features/outbound/presentation/widgets/pick_verify_scr
 part 'app_router.g.dart';
 
 @riverpod
-GoRouter appRouter(AppRouterRef ref) {
+GoRouter appRouter(Ref ref) {
   return GoRouter(
     initialLocation: '/login',
     debugLogDiagnostics: true,

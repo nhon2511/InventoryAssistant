@@ -8,6 +8,6 @@ part 'supabase_client_provider.g.dart';
 /// This provider is kept alive for the app's lifetime so the Supabase
 /// connection is never disposed.
 @Riverpod(keepAlive: true)
-SupabaseClient supabaseClient(SupabaseClientRef ref) {
+SupabaseClient supabaseClient(Ref ref) {
   return Supabase.instance.client;
 }

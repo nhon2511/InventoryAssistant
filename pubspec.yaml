@@ -9,12 +9,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # --- State Management ---
-  flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
-  hooks_riverpod: ^2.6.1
-  flutter_hooks: ^0.20.5
+  flutter_riverpod: ^3.4.3
+  riverpod_annotation: ^4.0.7
+  hooks_riverpod: ^3.4.3
+  flutter_hooks: ^0.21.3
 
   # --- Routing ---
   go_router: ^15.1.2
@@ -50,7 +52,7 @@ dependencies:
   printing: ^5.13.5
 
   # --- Utilities ---
-  intl: ^0.19.0
+  intl: ^0.20.2
   uuid: ^4.5.1
   logger: ^2.5.0
   flutter_dotenv: ^5.2.1
@@ -62,7 +64,7 @@ dependencies:
   cached_network_image: ^3.4.1
   path_provider: ^2.1.5
   share_plus: ^10.1.4
-  vibration: ^2.0.0
+  vibration: ^3.2.1
 
 dev_dependencies:
   flutter_test:
@@ -71,10 +73,10 @@ dev_dependencies:
     sdk: flutter
 
   # --- Code Generation ---
-  riverpod_generator: ^2.6.3
-  build_runner: ^2.4.15
-  freezed: ^3.0.0
-  json_serializable: ^6.9.4
+  riverpod_generator: ^4.0.9
+  build_runner: ^2.16.1
+  freezed: ^4.0.1
+  json_serializable: ^6.14.1
 
   # --- Linting ---
   very_good_analysis: ^7.0.0
