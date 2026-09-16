@@ -10,7 +10,7 @@ part 'inventory_realtime_controller.g.dart';
 /// Provides a realtime stream of [InventoryItem] updates
 /// via Supabase Realtime subscriptions.
 @riverpod
-Stream<List<InventoryItem>> inventoryRealtime(InventoryRealtimeRef ref) {
+Stream<List<InventoryItem>> inventoryRealtime(Ref ref) {
   final client = ref.watch(supabaseClientProvider);
   final ds = InventoryRemoteDataSourceImpl(client);
   final repo = InventoryRepositoryImpl(ds);

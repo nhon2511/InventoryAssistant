@@ -6,23 +6,49 @@ part of 'product_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$productControllerHash() => r'e5f6g7h8i9j0k1l2m3n4';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-abstract class _$ProductController
-    extends BuildlessAutoDisposeAsyncNotifier<List<Product>> {
+@ProviderFor(ProductController)
+final productControllerProvider = ProductControllerProvider._();
+
+final class ProductControllerProvider
+    extends $AsyncNotifierProvider<ProductController, List<Product>> {
+  ProductControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'productControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
   @override
-  FutureOr<List<Product>> build();
+  String debugGetCreateSourceHash() => _$productControllerHash();
+
+  @$internal
+  @override
+  ProductController create() => ProductController();
 }
 
-final productControllerProvider = AutoDisposeAsyncNotifierProvider<
-    ProductController, List<Product>>.internal(
-  ProductController.new,
-  name: r'productControllerProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$productControllerHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+String _$productControllerHash() => r'e4c4a7aabcd86b8b505574b5b4c18a179e73ffff';
 
-typedef ProductControllerRef = AutoDisposeAsyncNotifierRef<List<Product>>;
+abstract class _$ProductController extends $AsyncNotifier<List<Product>> {
+  FutureOr<List<Product>> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<List<Product>>, List<Product>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<Product>>, List<Product>>,
+              AsyncValue<List<Product>>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}

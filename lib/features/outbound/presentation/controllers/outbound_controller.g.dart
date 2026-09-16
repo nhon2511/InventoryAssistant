@@ -6,24 +6,56 @@ part of 'outbound_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$outboundControllerHash() => r'j0k1l2m3n4o5p6q7r8s9';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-abstract class _$OutboundController
-    extends BuildlessAutoDisposeAsyncNotifier<List<WarehouseOrder>> {
+@ProviderFor(OutboundController)
+final outboundControllerProvider = OutboundControllerProvider._();
+
+final class OutboundControllerProvider
+    extends $AsyncNotifierProvider<OutboundController, List<WarehouseOrder>> {
+  OutboundControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'outboundControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
   @override
-  FutureOr<List<WarehouseOrder>> build();
+  String debugGetCreateSourceHash() => _$outboundControllerHash();
+
+  @$internal
+  @override
+  OutboundController create() => OutboundController();
 }
 
-final outboundControllerProvider = AutoDisposeAsyncNotifierProvider<
-    OutboundController, List<WarehouseOrder>>.internal(
-  OutboundController.new,
-  name: r'outboundControllerProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$outboundControllerHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+String _$outboundControllerHash() =>
+    r'64f28eeb22a5f51386b1321965e06e7271bb56a5';
 
-typedef OutboundControllerRef
-    = AutoDisposeAsyncNotifierRef<List<WarehouseOrder>>;
+abstract class _$OutboundController
+    extends $AsyncNotifier<List<WarehouseOrder>> {
+  FutureOr<List<WarehouseOrder>> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<List<WarehouseOrder>>, List<WarehouseOrder>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                AsyncValue<List<WarehouseOrder>>,
+                List<WarehouseOrder>
+              >,
+              AsyncValue<List<WarehouseOrder>>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}

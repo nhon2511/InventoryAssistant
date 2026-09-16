@@ -6,30 +6,70 @@ part of 'auth_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$authControllerHash() => r'd4e5f6g7h8i9j0k1l2m3';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
+/// Controller that manages authentication state.
+///
+/// Uses [AsyncNotifier] pattern with Riverpod code generation.
 
-abstract class _$AuthController extends BuildlessNotifier<AuthState> {
-  late final AuthState _$state;
+@ProviderFor(AuthController)
+final authControllerProvider = AuthControllerProvider._();
+
+/// Controller that manages authentication state.
+///
+/// Uses [AsyncNotifier] pattern with Riverpod code generation.
+final class AuthControllerProvider
+    extends $NotifierProvider<AuthController, AuthState> {
+  /// Controller that manages authentication state.
+  ///
+  /// Uses [AsyncNotifier] pattern with Riverpod code generation.
+  AuthControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'authControllerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
-  AuthState build();
+  String debugGetCreateSourceHash() => _$authControllerHash();
 
-  AuthState get state => _$state;
+  @$internal
+  @override
+  AuthController create() => AuthController();
 
-  set state(AuthState value) {
-    _$state = value;
-    ref.notifyListeners();
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AuthState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AuthState>(value),
+    );
   }
 }
 
-final authControllerProvider =
-    NotifierProvider<AuthController, AuthState>.internal(
-  AuthController.new,
-  name: r'authControllerProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$authControllerHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+String _$authControllerHash() => r'21441499de2b9c1c3ed4ce2dce56a926e4c9b74e';
 
-typedef AuthControllerRef = NotifierRef<AuthState>;
+/// Controller that manages authentication state.
+///
+/// Uses [AsyncNotifier] pattern with Riverpod code generation.
+
+abstract class _$AuthController extends $Notifier<AuthState> {
+  AuthState build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<AuthState, AuthState>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AuthState, AuthState>,
+              AuthState,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
