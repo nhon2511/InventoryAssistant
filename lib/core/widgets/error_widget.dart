@@ -19,7 +19,7 @@ class AppErrorWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Center(
+    return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -33,6 +33,8 @@ class AppErrorWidget extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               message,
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: colorScheme.onSurface,
                   ),

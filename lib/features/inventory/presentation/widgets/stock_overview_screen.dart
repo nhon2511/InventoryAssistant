@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:smart_wms/app/theme/app_tokens.dart';
+import 'package:smart_wms/core/widgets/empty_state_widget.dart';
+import 'package:smart_wms/core/widgets/status_chip.dart';
 import 'package:smart_wms/core/widgets/error_widget.dart';
 import 'package:smart_wms/core/widgets/loading_widget.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/inventory_realtime_controller.dart';
@@ -38,33 +42,81 @@ class StockOverviewScreen extends ConsumerWidget {
             0,
             (sum, item) => sum + item.quantityOnHand,
           );
+          final outOfStock = items.where((item) => item.quantityAvailable <= 0).length;
+          final expiring = items.where((item) {
+            final date = item.expiryDate;
+            return date != null &&
+                date.isBefore(DateTime.now().add(const Duration(days: 30)));
+          }).length;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+          if (items.isEmpty) {
+            return const EmptyStateWidget(
+              message: 'Kho chưa có dữ liệu. Hãy thêm sản phẩm để bắt đầu.',
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(inventoryRealtimeProvider);
+              await ref.read(inventoryRealtimeProvider.future);
+            },
+            child: ListView(
+            padding: const EdgeInsets.all(AppTokens.lg),
+            children: [Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Summary Cards
-                Row(
-                  children: [
-                    Expanded(
-                      child: _SummaryCard(
+                LayoutBuilder(
+                  builder: (context, constraints) => Wrap(
+                    spacing: AppTokens.md,
+                    runSpacing: AppTokens.md,
+                    children: [
+                      SizedBox(
+                        width: constraints.maxWidth >= 700
+                            ? (constraints.maxWidth - 3 * AppTokens.md) / 4
+                            : (constraints.maxWidth - AppTokens.md) / 2,
+                        child: _SummaryCard(
                         title: 'Tổng mặt hàng',
                         value: '$totalItems',
                         icon: Icons.inventory_2,
                         color: Theme.of(context).colorScheme.primary,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _SummaryCard(
+                      ),
+                      SizedBox(
+                        width: constraints.maxWidth >= 700
+                            ? (constraints.maxWidth - 3 * AppTokens.md) / 4
+                            : (constraints.maxWidth - AppTokens.md) / 2,
+                        child: _SummaryCard(
                         title: 'Tổng tồn kho',
                         value: '$totalOnHand',
                         icon: Icons.warehouse,
                         color: Theme.of(context).colorScheme.secondary,
                       ),
-                    ),
-                  ],
+                      ),
+                      SizedBox(
+                        width: constraints.maxWidth >= 700
+                            ? (constraints.maxWidth - 3 * AppTokens.md) / 4
+                            : (constraints.maxWidth - AppTokens.md) / 2,
+                        child: _SummaryCard(
+                          title: 'Hết hàng',
+                          value: '$outOfStock',
+                          icon: Icons.remove_shopping_cart_outlined,
+                          color: AppTokens.outOfStock,
+                        ),
+                      ),
+                      SizedBox(
+                        width: constraints.maxWidth >= 700
+                            ? (constraints.maxWidth - 3 * AppTokens.md) / 4
+                            : (constraints.maxWidth - AppTokens.md) / 2,
+                        child: _SummaryCard(
+                          title: 'Cận hoặc quá hạn',
+                          value: '$expiring',
+                          icon: Icons.event_busy_outlined,
+                          color: AppTokens.expiring,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -76,24 +128,20 @@ class StockOverviewScreen extends ConsumerWidget {
                 ...items.take(20).map(
                       (item) => Card(
                         child: ListTile(
+                          onTap: () => context.go('/products/${item.productId}'),
                           title: Text(item.productName ?? item.productId),
                           subtitle: Text(
                             'Tồn: ${item.quantityOnHand} | '
                             'Đã giữ: ${item.quantityReserved}',
                           ),
-                          trailing: Text(
-                            '${item.quantityAvailable}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: item.quantityAvailable <= 0
-                                  ? Theme.of(context).colorScheme.error
-                                  : null,
-                            ),
-                          ),
+                          trailing: item.quantityAvailable <= 0
+                              ? const StatusChip.outOfStock()
+                              : Text('${item.quantityAvailable}'),
                         ),
                       ),
                     ),
               ],
+            )],
             ),
           );
         },

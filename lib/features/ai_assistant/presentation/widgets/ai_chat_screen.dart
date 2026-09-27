@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:smart_wms/app/theme/app_tokens.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/chat_message.dart';
+import 'package:smart_wms/features/ai_assistant/domain/entities/ai_result.dart';
+import 'package:smart_wms/features/ai_assistant/presentation/widgets/ai_result_card.dart';
 import 'package:smart_wms/features/ai_assistant/presentation/controllers/ai_chat_controller.dart';
 
 /// AI assistant chat screen with text input and conversation display.
@@ -13,6 +16,18 @@ class AiChatScreen extends HookConsumerWidget {
     final chatState = ref.watch(aiChatControllerProvider);
     final textController = useTextEditingController();
     final scrollController = useScrollController();
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (scrollController.hasClients) {
+          scrollController.animateTo(
+            scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+      return null;
+    }, [chatState.messages.length, chatState.isProcessing]);
 
     return Scaffold(
       appBar: AppBar(
@@ -20,15 +35,29 @@ class AiChatScreen extends HookConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            onPressed: () {
-              ref.read(aiChatControllerProvider.notifier).clearChat();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.mic),
-            onPressed: () {
-              // TODO: Implement speech-to-text via speech_to_text
-            },
+            tooltip: 'Xóa hội thoại',
+            onPressed: chatState.messages.isEmpty
+                ? null
+                : () => showDialog<void>(
+                      context: context,
+                      builder: (dialogContext) => AlertDialog(
+                        title: const Text('Xóa hội thoại?'),
+                        content: const Text('Các tin nhắn hiện tại sẽ bị xóa.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: const Text('Hủy'),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              ref.read(aiChatControllerProvider.notifier).clearChat();
+                              Navigator.pop(dialogContext);
+                            },
+                            child: const Text('Xóa'),
+                          ),
+                        ],
+                      ),
+                    ),
           ),
         ],
       ),
@@ -37,7 +66,10 @@ class AiChatScreen extends HookConsumerWidget {
           // Chat messages list
           Expanded(
             child: chatState.messages.isEmpty
-                ? const _EmptyChat()
+                ? _EmptyChat(onSuggestion: (text) {
+                    textController.text = text;
+                    _sendMessage(ref, textController);
+                  })
                 : ListView.builder(
                     controller: scrollController,
                     padding: const EdgeInsets.all(16),
@@ -45,6 +77,7 @@ class AiChatScreen extends HookConsumerWidget {
                     itemBuilder: (context, index) {
                       return _ChatBubble(
                         message: chatState.messages[index],
+                        onDraftChanged: (result) => ref.read(aiChatControllerProvider.notifier).updateDraft(index, result),
                       );
                     },
                   ),
@@ -53,8 +86,14 @@ class AiChatScreen extends HookConsumerWidget {
           // Processing indicator
           if (chatState.isProcessing)
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: LinearProgressIndicator(),
+              padding: EdgeInsets.all(AppTokens.md),
+              child: Row(
+                children: [
+                  SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                  SizedBox(width: AppTokens.md),
+                  Text('Trợ lý đang xử lý...'),
+                ],
+              ),
             ),
 
           // Text input
@@ -105,7 +144,8 @@ class AiChatScreen extends HookConsumerWidget {
 }
 
 class _EmptyChat extends StatelessWidget {
-  const _EmptyChat();
+  const _EmptyChat({required this.onSuggestion});
+  final ValueChanged<String> onSuggestion;
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +165,15 @@ class _EmptyChat extends StatelessWidget {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge,
           ),
+          const SizedBox(height: AppTokens.lg),
+          ActionChip(
+            label: const Text('Kho hiện còn những gì?'),
+            onPressed: () => onSuggestion('Kho hiện còn những gì?'),
+          ),
+          ActionChip(
+            label: const Text('Tạo phiếu xuất kho'),
+            onPressed: () => onSuggestion('Tạo phiếu xuất kho'),
+          ),
         ],
       ),
     );
@@ -132,9 +181,10 @@ class _EmptyChat extends StatelessWidget {
 }
 
 class _ChatBubble extends StatelessWidget {
-  const _ChatBubble({required this.message});
+  const _ChatBubble({required this.message, required this.onDraftChanged});
 
   final ChatMessage message;
+  final ValueChanged<AiResult> onDraftChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -155,9 +205,15 @@ class _ChatBubble extends StatelessWidget {
               : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Text(
-          message.content,
-          style: Theme.of(context).textTheme.bodyMedium,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (message.result != null && !isUser)
+              AiResultCard(result: message.result!, onChanged: onDraftChanged)
+            else
+              Text(message.content, style: Theme.of(context).textTheme.bodyMedium),
+          ],
         ),
       ),
     );

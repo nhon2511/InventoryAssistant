@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:smart_wms/core/widgets/empty_state_widget.dart';
 import 'package:smart_wms/core/widgets/error_widget.dart';
 import 'package:smart_wms/core/widgets/loading_widget.dart';
 import 'package:smart_wms/features/outbound/presentation/controllers/outbound_controller.dart';
@@ -20,7 +22,9 @@ class OutboundListScreen extends ConsumerWidget {
           message: error.toString(),
           onRetry: () => ref.invalidate(outboundControllerProvider),
         ),
-        data: (orders) => ListView.builder(
+        data: (orders) => orders.isEmpty
+            ? const EmptyStateWidget(message: 'Chưa có phiếu xuất kho.')
+            : ListView.builder(
           padding: const EdgeInsets.all(8),
           itemCount: orders.length,
           itemBuilder: (context, index) {
@@ -31,14 +35,24 @@ class OutboundListScreen extends ConsumerWidget {
                 title: Text(order.orderCode),
                 subtitle: Text('Trạng thái: ${order.status.dbValue}'),
                 trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.go('/outbound/${order.id}'),
               ),
             );
           },
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // TODO: Create new outbound order
+        onPressed: () async {
+          try {
+            final id = await ref.read(outboundControllerProvider.notifier).createDraft();
+            if (context.mounted) context.go('/outbound/$id');
+          } catch (error) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Không tạo được phiếu: $error')),
+              );
+            }
+          }
         },
         icon: const Icon(Icons.add),
         label: const Text('Tạo phiếu xuất'),

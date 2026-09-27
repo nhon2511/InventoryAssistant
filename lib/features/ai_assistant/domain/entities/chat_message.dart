@@ -1,3 +1,5 @@
+import 'package:smart_wms/features/ai_assistant/domain/entities/ai_result.dart';
+
 /// Represents a single chat message in the AI assistant conversation.
 class ChatMessage {
   const ChatMessage({
@@ -5,6 +7,7 @@ class ChatMessage {
     required this.content,
     this.timestamp,
     this.metadata,
+    this.result,
   });
 
   /// Who sent this message.
@@ -18,6 +21,7 @@ class ChatMessage {
 
   /// Optional structured metadata (e.g., stock query results).
   final Map<String, dynamic>? metadata;
+  final AiResult? result;
 }
 
 /// Roles in a chat conversation.

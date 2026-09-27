@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:smart_wms/app/router/route_names.dart';
+import 'package:smart_wms/app/theme/app_tokens.dart';
+import 'package:smart_wms/core/config/app_config.dart';
+import 'package:smart_wms/core/widgets/widget_gallery_screen.dart';
 import 'package:smart_wms/features/ai_assistant/presentation/widgets/ai_chat_screen.dart';
 import 'package:smart_wms/features/auth/presentation/widgets/login_screen.dart';
 import 'package:smart_wms/features/auth/presentation/widgets/register_screen.dart';
+import 'package:smart_wms/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:smart_wms/features/inbound/presentation/widgets/batch_scan_screen.dart';
 import 'package:smart_wms/features/inbound/presentation/widgets/inbound_detail_screen.dart';
 import 'package:smart_wms/features/inbound/presentation/widgets/inbound_list_screen.dart';
@@ -12,7 +16,6 @@ import 'package:smart_wms/features/inbound/presentation/widgets/ocr_scan_screen.
 import 'package:smart_wms/features/inventory/presentation/widgets/location_list_screen.dart';
 import 'package:smart_wms/features/inventory/presentation/widgets/product_detail_screen.dart';
 import 'package:smart_wms/features/inventory/presentation/widgets/product_list_screen.dart';
-import 'package:smart_wms/features/inventory/presentation/widgets/stock_overview_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/outbound_detail_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/outbound_list_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/pick_verify_screen.dart';
@@ -22,7 +25,7 @@ part 'app_router.g.dart';
 @riverpod
 GoRouter appRouter(Ref ref) {
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: AppConfig.useMock ? '/' : '/login',
     debugLogDiagnostics: true,
     redirect: (context, state) {
       // TODO: Implement auth redirect guard
@@ -32,6 +35,10 @@ GoRouter appRouter(Ref ref) {
       ..._authRoutes,
       _mainShellRoute,
       ..._scannerRoutes,
+      GoRoute(
+        path: '/dev/widgets',
+        builder: (context, state) => const WidgetGalleryScreen(),
+      ),
     ],
   );
 }
@@ -82,12 +89,12 @@ final _mainShellRoute = ShellRoute(
     GoRoute(
       path: '/',
       name: RouteNames.home,
-      builder: (context, state) => const StockOverviewScreen(),
+      builder: (context, state) => const DashboardScreen(),
     ),
     GoRoute(
       path: '/products',
       name: RouteNames.productList,
-      builder: (context, state) => const ProductListScreen(),
+      builder: (context, state) => ProductListScreen(stockFilter: state.uri.queryParameters['stock']),
       routes: [
         GoRoute(
           path: ':productId',
@@ -143,7 +150,7 @@ final _mainShellRoute = ShellRoute(
 );
 
 
-/// Main app shell with bottom navigation bar.
+/// Responsive shell: compact navigation on phones, rail on larger displays.
 class _MainShell extends StatelessWidget {
   const _MainShell({required this.child});
 
@@ -151,10 +158,32 @@ class _MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedIndex = _calculateSelectedIndex(context);
+    final wide = MediaQuery.sizeOf(context).width >=
+        AppTokens.navigationBreakpoint;
     return Scaffold(
-      body: child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _calculateSelectedIndex(context),
+      body: wide
+          ? Row(
+              children: [
+                NavigationRail(
+                  extended: MediaQuery.sizeOf(context).width >= 960,
+                  selectedIndex: selectedIndex,
+                  onDestinationSelected: (index) => _onItemTapped(index, context),
+                  destinations: const [
+                    NavigationRailDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: Text('Tổng quan')),
+                    NavigationRailDestination(icon: Icon(Icons.inventory_2_outlined), selectedIcon: Icon(Icons.inventory_2), label: Text('Sản phẩm')),
+                    NavigationRailDestination(icon: Icon(Icons.input_outlined), selectedIcon: Icon(Icons.input), label: Text('Nhập kho')),
+                    NavigationRailDestination(icon: Icon(Icons.output_outlined), selectedIcon: Icon(Icons.output), label: Text('Xuất kho')),
+                    NavigationRailDestination(icon: Icon(Icons.smart_toy_outlined), selectedIcon: Icon(Icons.smart_toy), label: Text('Trợ lý AI')),
+                  ],
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(child: child),
+              ],
+            )
+          : child,
+      bottomNavigationBar: wide ? null : NavigationBar(
+        selectedIndex: selectedIndex,
         onDestinationSelected: (index) => _onItemTapped(index, context),
         destinations: const [
           NavigationDestination(

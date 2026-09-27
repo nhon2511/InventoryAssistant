@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_wms/app/theme/app_colors.dart';
+import 'package:smart_wms/app/theme/app_tokens.dart';
 
 /// Application theme configuration.
 ///
@@ -25,24 +26,24 @@ abstract final class AppTheme {
       cardTheme: CardThemeData(
         elevation: 1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTokens.md),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTokens.md),
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
+          horizontal: AppTokens.lg,
+          vertical: AppTokens.md,
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(double.infinity, 48),
+          minimumSize: const Size(0, AppTokens.touchTarget),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTokens.md),
           ),
         ),
       ),
@@ -90,7 +91,7 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(double.infinity, 48),
+          minimumSize: const Size(0, AppTokens.touchTarget),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
