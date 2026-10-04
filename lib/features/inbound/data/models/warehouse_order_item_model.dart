@@ -1,6 +1,19 @@
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
 
 class WarehouseOrderItemModel {
+
+  factory WarehouseOrderItemModel.fromJson(Map<String, dynamic> json) {
+    return WarehouseOrderItemModel(
+      id: json['id'] as String,
+      orderId: json['order_id'] as String,
+      productId: json['product_id'] as String,
+      locationId: json['location_id'] as String?,
+      lotNumber: json['lot_number'] as String?,
+      expiryDate: json['expiry_date'] as String?,
+      expectedQuantity: json['expected_quantity'] as int? ?? 0,
+      actualQuantity: json['actual_quantity'] as int? ?? 0,
+    );
+  }
   const WarehouseOrderItemModel({
     required this.id,
     required this.orderId,
@@ -20,19 +33,6 @@ class WarehouseOrderItemModel {
   final String? expiryDate;
   final int expectedQuantity;
   final int actualQuantity;
-
-  factory WarehouseOrderItemModel.fromJson(Map<String, dynamic> json) {
-    return WarehouseOrderItemModel(
-      id: json['id'] as String,
-      orderId: json['order_id'] as String,
-      productId: json['product_id'] as String,
-      locationId: json['location_id'] as String?,
-      lotNumber: json['lot_number'] as String?,
-      expiryDate: json['expiry_date'] as String?,
-      expectedQuantity: json['expected_quantity'] as int? ?? 0,
-      actualQuantity: json['actual_quantity'] as int? ?? 0,
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {

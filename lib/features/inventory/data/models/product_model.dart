@@ -1,6 +1,20 @@
 import 'package:smart_wms/features/inventory/domain/entities/product.dart';
 
 class ProductModel {
+
+  factory ProductModel.fromJson(Map<String, dynamic> json) {
+    return ProductModel(
+      id: json['id'] as String,
+      sku: json['sku'] as String,
+      barcode: json['barcode'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String?,
+      unit: json['unit'] as String? ?? 'Pcs',
+      minSafetyStock: json['min_safety_stock'] as int? ?? 0,
+      createdAt: json['created_at'] as String?,
+      updatedAt: json['updated_at'] as String?,
+    );
+  }
   const ProductModel({
     required this.id,
     required this.sku,
@@ -22,20 +36,6 @@ class ProductModel {
   final int minSafetyStock;
   final String? createdAt;
   final String? updatedAt;
-
-  factory ProductModel.fromJson(Map<String, dynamic> json) {
-    return ProductModel(
-      id: json['id'] as String,
-      sku: json['sku'] as String,
-      barcode: json['barcode'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String?,
-      unit: json['unit'] as String? ?? 'Pcs',
-      minSafetyStock: json['min_safety_stock'] as int? ?? 0,
-      createdAt: json['created_at'] as String?,
-      updatedAt: json['updated_at'] as String?,
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {

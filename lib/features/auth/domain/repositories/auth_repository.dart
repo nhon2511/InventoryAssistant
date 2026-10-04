@@ -1,4 +1,5 @@
 import 'package:smart_wms/core/utils/typedefs.dart';
+import 'package:smart_wms/features/auth/data/repositories/auth_repository_impl.dart' show AuthRepositoryImpl;
 import 'package:smart_wms/features/auth/domain/entities/profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 

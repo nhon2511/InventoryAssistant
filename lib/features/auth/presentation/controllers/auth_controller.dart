@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncNotifier;
+import 'package:hooks_riverpod/hooks_riverpod.dart' show AsyncNotifier;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:smart_wms/core/network/supabase_client_provider.dart';
 import 'package:smart_wms/core/usecases/usecase.dart';
@@ -43,7 +45,7 @@ class AuthController extends _$AuthController {
     final result = await _getCurrentProfileUseCase(const NoParams());
     state = result.fold(
       (failure) => const AuthUnauthenticated(),
-      (profile) => AuthAuthenticated(profile),
+      AuthAuthenticated.new,
     );
   }
 
@@ -58,7 +60,7 @@ class AuthController extends _$AuthController {
     );
     state = result.fold(
       (failure) => AuthError(failure.message),
-      (profile) => AuthAuthenticated(profile),
+      AuthAuthenticated.new,
     );
   }
 
@@ -80,7 +82,7 @@ class AuthController extends _$AuthController {
     );
     state = result.fold(
       (failure) => AuthError(failure.message),
-      (profile) => AuthAuthenticated(profile),
+      AuthAuthenticated.new,
     );
   }
 

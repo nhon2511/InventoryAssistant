@@ -1,3 +1,5 @@
+import 'package:go_router/go_router.dart' show GoRouter;
+
 /// Centralized route name constants used by [GoRouter].
 ///
 /// Using constants prevents typos and makes refactoring easier.

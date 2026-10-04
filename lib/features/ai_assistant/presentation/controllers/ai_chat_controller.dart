@@ -3,6 +3,7 @@ import 'package:smart_wms/core/network/supabase_client_provider.dart';
 import 'package:smart_wms/features/ai_assistant/data/datasources/ai_remote_datasource.dart';
 import 'package:smart_wms/features/ai_assistant/data/repositories/ai_assistant_repository_impl.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/chat_message.dart';
+import 'package:smart_wms/features/ai_assistant/domain/entities/parsed_intent.dart';
 import 'package:smart_wms/features/ai_assistant/domain/usecases/parse_intent_usecase.dart';
 import 'package:smart_wms/features/ai_assistant/domain/usecases/query_stock_usecase.dart';
 
@@ -44,7 +45,7 @@ class AiChatController extends _$AiChatController {
     // Step 1: Parse intent via LLM Edge Function.
     final intentResult = await _parseIntent(userText);
 
-    final String response = await intentResult.fold(
+    final response = await intentResult.fold(
       (failure) async => failure.message,
       (intent) async {
         if (!intent.isConfident) {

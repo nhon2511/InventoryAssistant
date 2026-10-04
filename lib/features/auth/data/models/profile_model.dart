@@ -3,6 +3,26 @@ import 'package:smart_wms/features/auth/domain/entities/profile.dart';
 
 /// Data transfer object for the `profiles` table.
 class ProfileModel {
+
+  factory ProfileModel.fromJson(Map<String, dynamic> json) {
+    return ProfileModel(
+      id: json['id'] as String,
+      fullName: json['full_name'] as String? ?? '',
+      role: json['role'] as String? ?? 'STAFF',
+      phoneNumber: json['phone_number'] as String?,
+      createdAt: json['created_at'] as String?,
+    );
+  }
+
+  factory ProfileModel.fromEntity(Profile entity) {
+    return ProfileModel(
+      id: entity.id,
+      fullName: entity.fullName,
+      role: entity.role.dbValue,
+      phoneNumber: entity.phoneNumber,
+      createdAt: entity.createdAt?.toIso8601String(),
+    );
+  }
   const ProfileModel({
     required this.id,
     required this.fullName,
@@ -16,16 +36,6 @@ class ProfileModel {
   final String role;
   final String? phoneNumber;
   final String? createdAt;
-
-  factory ProfileModel.fromJson(Map<String, dynamic> json) {
-    return ProfileModel(
-      id: json['id'] as String,
-      fullName: json['full_name'] as String? ?? '',
-      role: json['role'] as String? ?? 'STAFF',
-      phoneNumber: json['phone_number'] as String?,
-      createdAt: json['created_at'] as String?,
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -44,16 +54,6 @@ class ProfileModel {
       role: UserRole.fromString(role),
       phoneNumber: phoneNumber,
       createdAt: createdAt != null ? DateTime.tryParse(createdAt!) : null,
-    );
-  }
-
-  factory ProfileModel.fromEntity(Profile entity) {
-    return ProfileModel(
-      id: entity.id,
-      fullName: entity.fullName,
-      role: entity.role.dbValue,
-      phoneNumber: entity.phoneNumber,
-      createdAt: entity.createdAt?.toIso8601String(),
     );
   }
 }
