@@ -1,27 +1,25 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:smart_wms/core/network/supabase_client_provider.dart';
-import 'package:smart_wms/features/inbound/data/datasources/inbound_remote_datasource.dart';
-import 'package:smart_wms/features/inbound/data/repositories/inbound_repository_impl.dart';
+import 'package:smart_wms/core/di/inbound_providers.dart';
+import 'package:smart_wms/core/usecases/usecase.dart';
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
+import 'package:smart_wms/features/inbound/domain/usecases/get_inbound_orders_usecase.dart';
 
 part 'inbound_controller.g.dart';
 
 @riverpod
 class InboundController extends _$InboundController {
-  late final InboundRepositoryImpl _repository;
+  late final GetInboundOrdersUseCase _getInboundOrders;
 
   @override
   Future<List<WarehouseOrder>> build() async {
-    final client = ref.watch(supabaseClientProvider);
-    final ds = InboundRemoteDataSourceImpl(client);
-    _repository = InboundRepositoryImpl(ds);
+    _getInboundOrders = ref.watch(getInboundOrdersUseCaseProvider);
     return _fetchOrders();
   }
 
   Future<List<WarehouseOrder>> _fetchOrders() async {
-    final result = await _repository.getInboundOrders();
+    final result = await _getInboundOrders(const NoParams());
     return result.fold(
-      (failure) => throw Exception(failure.message),
+      (failure) => throw StateError(failure.message),
       (orders) => orders,
     );
   }

@@ -1,4 +1,4 @@
-/// Centralized route name constants used by [GoRouter].
+/// Centralized route name constants used by the app router.
 ///
 /// Using constants prevents typos and makes refactoring easier.
 abstract final class RouteNames {

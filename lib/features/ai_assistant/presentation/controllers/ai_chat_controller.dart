@@ -1,9 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:smart_wms/core/network/supabase_client_provider.dart';
-import 'package:smart_wms/features/ai_assistant/data/datasources/ai_remote_datasource.dart';
-import 'package:smart_wms/features/ai_assistant/data/repositories/ai_assistant_repository_impl.dart';
+import 'package:smart_wms/core/di/ai_assistant_providers.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/chat_message.dart';
-import 'package:smart_wms/features/ai_assistant/domain/entities/parsed_intent.dart';
 import 'package:smart_wms/features/ai_assistant/domain/usecases/parse_intent_usecase.dart';
 import 'package:smart_wms/features/ai_assistant/domain/usecases/query_stock_usecase.dart';
 
@@ -17,12 +14,8 @@ class AiChatController extends _$AiChatController {
 
   @override
   AiChatState build() {
-    final client = ref.watch(supabaseClientProvider);
-    final ds = AiRemoteDataSourceImpl(client);
-    final repo = AiAssistantRepositoryImpl(ds);
-
-    _parseIntent = ParseIntentUseCase(repo);
-    _queryStock = QueryStockUseCase(repo);
+    _parseIntent = ref.watch(parseIntentUseCaseProvider);
+    _queryStock = ref.watch(queryStockUseCaseProvider);
 
     return const AiChatState();
   }
@@ -45,7 +38,7 @@ class AiChatController extends _$AiChatController {
     // Step 1: Parse intent via LLM Edge Function.
     final intentResult = await _parseIntent(userText);
 
-    final String response = await intentResult.fold(
+    final response = await intentResult.fold(
       (failure) async => failure.message,
       (intent) async {
         if (!intent.isConfident) {
@@ -56,10 +49,12 @@ class AiChatController extends _$AiChatController {
         // Step 2: Execute action based on intent.
         return switch (intent.intent) {
           'query_stock' => await _handleQueryStock(intent.entities),
-          'create_order' => 'Chức năng tạo đơn qua giọng nói '
-              'sẽ sớm được hỗ trợ.',
-          _ => 'Tôi nhận được yêu cầu "${intent.intent}" '
-              'nhưng chưa hỗ trợ xử lý.',
+          'create_order' =>
+            'Chức năng tạo đơn qua giọng nói '
+                'sẽ sớm được hỗ trợ.',
+          _ =>
+            'Tôi nhận được yêu cầu "${intent.intent}" '
+                'nhưng chưa hỗ trợ xử lý.',
         };
       },
     );
@@ -92,18 +87,12 @@ class AiChatController extends _$AiChatController {
 
 /// State for the AI chat conversation.
 class AiChatState {
-  const AiChatState({
-    this.messages = const [],
-    this.isProcessing = false,
-  });
+  const AiChatState({this.messages = const [], this.isProcessing = false});
 
   final List<ChatMessage> messages;
   final bool isProcessing;
 
-  AiChatState copyWith({
-    List<ChatMessage>? messages,
-    bool? isProcessing,
-  }) {
+  AiChatState copyWith({List<ChatMessage>? messages, bool? isProcessing}) {
     return AiChatState(
       messages: messages ?? this.messages,
       isProcessing: isProcessing ?? this.isProcessing,

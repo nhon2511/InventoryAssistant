@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:smart_wms/app/router/route_names.dart';
 import 'package:smart_wms/features/ai_assistant/presentation/widgets/ai_chat_screen.dart';
+import 'package:smart_wms/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:smart_wms/features/auth/presentation/states/auth_state.dart';
 import 'package:smart_wms/features/auth/presentation/widgets/login_screen.dart';
 import 'package:smart_wms/features/auth/presentation/widgets/register_screen.dart';
 import 'package:smart_wms/features/inbound/presentation/widgets/batch_scan_screen.dart';
@@ -20,23 +22,28 @@ import 'package:smart_wms/features/outbound/presentation/widgets/pick_verify_scr
 part 'app_router.g.dart';
 
 @riverpod
-GoRouter appRouter(AppRouterRef ref) {
+GoRouter appRouter(Ref ref) {
+  final authState = ref.watch(authControllerProvider);
+
   return GoRouter(
     initialLocation: '/login',
     debugLogDiagnostics: true,
     redirect: (context, state) {
-      // TODO: Implement auth redirect guard
+      final location = state.matchedLocation;
+      final isPublicRoute = location == '/login' || location == '/register';
+      final isAuthLoading =
+          authState is AuthInitial || authState is AuthLoading;
+      final isAuthenticated = authState is AuthAuthenticated;
+
+      if (isAuthLoading) return null;
+
+      if (!isAuthenticated && !isPublicRoute) return '/login';
+      if (isAuthenticated && isPublicRoute) return '/';
       return null;
     },
-    routes: [
-      ..._authRoutes,
-      _mainShellRoute,
-      ..._scannerRoutes,
-    ],
+    routes: [..._authRoutes, _mainShellRoute, ..._scannerRoutes],
   );
 }
-
-
 
 // ── Auth Routes ─────────────────────────────────────────────────────
 final _authRoutes = [
@@ -73,7 +80,6 @@ final _scannerRoutes = [
     },
   ),
 ];
-
 
 // ── Main Shell Route (Bottom Navigation) ────────────────────────────
 final _mainShellRoute = ShellRoute(
@@ -142,7 +148,6 @@ final _mainShellRoute = ShellRoute(
   ],
 );
 
-
 /// Main app shell with bottom navigation bar.
 class _MainShell extends StatelessWidget {
   const _MainShell({required this.child});
@@ -189,8 +194,7 @@ class _MainShell extends StatelessWidget {
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
-    if (location.startsWith('/products') ||
-        location.startsWith('/locations')) {
+    if (location.startsWith('/products') || location.startsWith('/locations')) {
       return 1;
     }
     if (location.startsWith('/inbound')) return 2;

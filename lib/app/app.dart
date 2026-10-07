@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_wms/app/router/app_router.dart';
 import 'package:smart_wms/app/theme/app_theme.dart';
@@ -18,12 +19,13 @@ class App extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
       routerConfig: router,
       locale: const Locale('vi', 'VN'),
-      supportedLocales: const [
-        Locale('vi', 'VN'),
-        Locale('en', 'US'),
+      supportedLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
     );
   }

@@ -1,0 +1,42 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create test environment file
+        run: printf 'SUPABASE_URL=https://example.supabase.co\nSUPABASE_ANON_KEY=test-key\n' > .env
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify generated code
+        run: dart run build_runner build
+
+      - name: Check generated files are committed
+        run: git diff --exit-code -- '*.g.dart'
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test --coverage

@@ -6,23 +6,50 @@ part of 'location_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$locationControllerHash() => r'f6g7h8i9j0k1l2m3n4o5';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-abstract class _$LocationController
-    extends BuildlessAutoDisposeAsyncNotifier<List<Location>> {
+@ProviderFor(LocationController)
+final locationControllerProvider = LocationControllerProvider._();
+
+final class LocationControllerProvider
+    extends $AsyncNotifierProvider<LocationController, List<Location>> {
+  LocationControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'locationControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
   @override
-  FutureOr<List<Location>> build();
+  String debugGetCreateSourceHash() => _$locationControllerHash();
+
+  @$internal
+  @override
+  LocationController create() => LocationController();
 }
 
-final locationControllerProvider = AutoDisposeAsyncNotifierProvider<
-    LocationController, List<Location>>.internal(
-  LocationController.new,
-  name: r'locationControllerProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$locationControllerHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+String _$locationControllerHash() =>
+    r'913873977596e2e77c659fd02aba37506e8b9889';
 
-typedef LocationControllerRef = AutoDisposeAsyncNotifierRef<List<Location>>;
+abstract class _$LocationController extends $AsyncNotifier<List<Location>> {
+  FutureOr<List<Location>> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<List<Location>>, List<Location>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<Location>>, List<Location>>,
+              AsyncValue<List<Location>>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}

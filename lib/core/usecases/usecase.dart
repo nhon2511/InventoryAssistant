@@ -2,7 +2,7 @@ import 'package:smart_wms/core/utils/typedefs.dart';
 
 /// Base class for all use cases in the application.
 ///
-/// [Type] is the return type of the use case.
+/// [T] is the return type of the use case.
 /// [Params] is the input parameters type.
 ///
 /// Example:
@@ -12,10 +12,11 @@ import 'package:smart_wms/core/utils/typedefs.dart';
 ///   FutureEither<Product> call(String barcode) async { ... }
 /// }
 /// ```
-abstract class UseCase<Type, Params> {
+// ignore: one_member_abstracts
+abstract class UseCase<T, Params> {
   const UseCase();
 
-  FutureEither<Type> call(Params params);
+  FutureEither<T> call(Params params);
 }
 
 /// Use when the use case does not require any parameters.

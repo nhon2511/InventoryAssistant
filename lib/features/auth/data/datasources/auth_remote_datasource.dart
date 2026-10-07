@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 /// Remote data source for authentication using Supabase Auth & profiles table.
 abstract class AuthRemoteDataSource {
+  String? get currentUserId;
+
   Future<ProfileModel> signInWithEmail({
     required String email,
     required String password,
@@ -29,6 +31,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   const AuthRemoteDataSourceImpl(this._client);
 
   final supabase.SupabaseClient _client;
+
+  @override
+  String? get currentUserId => _client.auth.currentUser?.id;
 
   @override
   Future<ProfileModel> signInWithEmail({

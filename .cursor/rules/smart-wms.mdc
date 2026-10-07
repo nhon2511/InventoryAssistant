@@ -1,0 +1,11 @@
+---
+description: Smart WMS Flutter architecture and implementation rules
+globs: lib/**/*.dart
+alwaysApply: true
+---
+
+Follow `AGENTS.md`, `docs/system-architecture.md`, and `docs/code-standards.md`.
+
+Keep the existing Riverpod, Supabase, GoRouter, and fpdart stack. Use the dependency direction `presentation -> domain <- data`. Widgets must not call Supabase directly. Business rules belong in domain use cases, and repository/data-source construction belongs in providers under `lib/core/di/`.
+
+After changing generated Dart code, run build_runner, flutter analyze, and flutter test when the local toolchain is available.

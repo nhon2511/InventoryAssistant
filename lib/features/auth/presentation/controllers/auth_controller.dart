@@ -1,8 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:smart_wms/core/network/supabase_client_provider.dart';
+import 'package:smart_wms/core/di/auth_providers.dart';
 import 'package:smart_wms/core/usecases/usecase.dart';
-import 'package:smart_wms/features/auth/data/datasources/auth_remote_datasource.dart';
-import 'package:smart_wms/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:smart_wms/features/auth/domain/usecases/get_current_profile_usecase.dart';
 import 'package:smart_wms/features/auth/domain/usecases/sign_in_usecase.dart';
 import 'package:smart_wms/features/auth/domain/usecases/sign_out_usecase.dart';
@@ -23,14 +21,10 @@ class AuthController extends _$AuthController {
 
   @override
   AuthState build() {
-    final client = ref.watch(supabaseClientProvider);
-    final dataSource = AuthRemoteDataSourceImpl(client);
-    final repository = AuthRepositoryImpl(dataSource);
-
-    _signInUseCase = SignInUseCase(repository);
-    _signUpUseCase = SignUpUseCase(repository);
-    _signOutUseCase = SignOutUseCase(repository);
-    _getCurrentProfileUseCase = GetCurrentProfileUseCase(repository);
+    _signInUseCase = ref.watch(signInUseCaseProvider);
+    _signUpUseCase = ref.watch(signUpUseCaseProvider);
+    _signOutUseCase = ref.watch(signOutUseCaseProvider);
+    _getCurrentProfileUseCase = ref.watch(getCurrentProfileUseCaseProvider);
 
     // Check initial auth state.
     _checkCurrentUser();
@@ -48,10 +42,7 @@ class AuthController extends _$AuthController {
   }
 
   /// Signs in with email and password.
-  Future<void> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> signIn({required String email, required String password}) async {
     state = const AuthLoading();
     final result = await _signInUseCase(
       SignInParams(email: email, password: password),

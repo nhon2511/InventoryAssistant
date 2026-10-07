@@ -69,11 +69,9 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   FutureEither<Profile> getCurrentProfile() async {
     try {
-      final userId = supabase.Supabase.instance.client.auth.currentUser?.id;
+      final userId = _remoteDataSource.currentUserId;
       if (userId == null) {
-        return const Left(
-          AuthFailure(message: 'Chưa đăng nhập.'),
-        );
+        return const Left(AuthFailure(message: 'Chưa đăng nhập.'));
       }
       final model = await _remoteDataSource.getProfile(userId);
       return Right(model.toEntity());
