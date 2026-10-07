@@ -1,6 +1,18 @@
 import 'package:smart_wms/features/outbound/domain/entities/pick_list_item.dart';
 
 class PickListItemModel {
+
+  factory PickListItemModel.fromJson(Map<String, dynamic> json) {
+    return PickListItemModel(
+      productId: json['product_id'] as String,
+      productName: json['product_name'] as String? ?? '',
+      barcode: json['barcode'] as String? ?? '',
+      locationLabel: json['location_label'] as String? ?? '',
+      lotNumber: json['lot_number'] as String?,
+      expectedQuantity: json['expected_quantity'] as int? ?? 0,
+      pickedQuantity: json['picked_quantity'] as int? ?? 0,
+    );
+  }
   const PickListItemModel({
     required this.productId,
     required this.productName,
@@ -18,18 +30,6 @@ class PickListItemModel {
   final String? lotNumber;
   final int expectedQuantity;
   final int pickedQuantity;
-
-  factory PickListItemModel.fromJson(Map<String, dynamic> json) {
-    return PickListItemModel(
-      productId: json['product_id'] as String,
-      productName: json['product_name'] as String? ?? '',
-      barcode: json['barcode'] as String? ?? '',
-      locationLabel: json['location_label'] as String? ?? '',
-      lotNumber: json['lot_number'] as String?,
-      expectedQuantity: json['expected_quantity'] as int? ?? 0,
-      pickedQuantity: json['picked_quantity'] as int? ?? 0,
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {

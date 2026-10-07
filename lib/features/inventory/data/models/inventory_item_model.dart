@@ -1,6 +1,19 @@
 import 'package:smart_wms/features/inventory/domain/entities/inventory_item.dart';
 
 class InventoryItemModel {
+
+  factory InventoryItemModel.fromJson(Map<String, dynamic> json) {
+    return InventoryItemModel(
+      id: json['id'] as String,
+      productId: json['product_id'] as String,
+      locationId: json['location_id'] as String,
+      lotNumber: json['lot_number'] as String?,
+      expiryDate: json['expiry_date'] as String?,
+      quantityOnHand: json['quantity_on_hand'] as int? ?? 0,
+      quantityReserved: json['quantity_reserved'] as int? ?? 0,
+      updatedAt: json['updated_at'] as String?,
+    );
+  }
   const InventoryItemModel({
     required this.id,
     required this.productId,
@@ -20,19 +33,6 @@ class InventoryItemModel {
   final int quantityOnHand;
   final int quantityReserved;
   final String? updatedAt;
-
-  factory InventoryItemModel.fromJson(Map<String, dynamic> json) {
-    return InventoryItemModel(
-      id: json['id'] as String,
-      productId: json['product_id'] as String,
-      locationId: json['location_id'] as String,
-      lotNumber: json['lot_number'] as String?,
-      expiryDate: json['expiry_date'] as String?,
-      quantityOnHand: json['quantity_on_hand'] as int? ?? 0,
-      quantityReserved: json['quantity_reserved'] as int? ?? 0,
-      updatedAt: json['updated_at'] as String?,
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {
