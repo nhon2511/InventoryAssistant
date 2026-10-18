@@ -8,7 +8,7 @@ part 'outbound_controller.g.dart';
 
 @riverpod
 class OutboundController extends _$OutboundController {
-  late final GetOutboundOrdersUseCase _getOutboundOrders;
+  late GetOutboundOrdersUseCase _getOutboundOrders;
 
   @override
   Future<List<WarehouseOrder>> build() async {

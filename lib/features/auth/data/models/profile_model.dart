@@ -3,6 +3,13 @@ import 'package:smart_wms/features/auth/domain/entities/profile.dart';
 
 /// Data transfer object for the `profiles` table.
 class ProfileModel {
+  const ProfileModel({
+    required this.id,
+    required this.fullName,
+    required this.role,
+    this.phoneNumber,
+    this.createdAt,
+  });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
     return ProfileModel(
@@ -23,13 +30,6 @@ class ProfileModel {
       createdAt: entity.createdAt?.toIso8601String(),
     );
   }
-  const ProfileModel({
-    required this.id,
-    required this.fullName,
-    required this.role,
-    this.phoneNumber,
-    this.createdAt,
-  });
 
   final String id;
   final String fullName;
@@ -57,4 +57,3 @@ class ProfileModel {
     );
   }
 }
-

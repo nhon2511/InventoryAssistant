@@ -91,9 +91,7 @@ class InventoryRemoteDataSourceImpl implements InventoryRemoteDataSource {
   }
 
   @override
-  Future<List<InventoryItemModel>> getStockByProduct(
-    String productId,
-  ) async {
+  Future<List<InventoryItemModel>> getStockByProduct(String productId) async {
     try {
       final data = await _client
           .from(AppConstants.inventoryItemsTable)
@@ -121,8 +119,7 @@ class InventoryRemoteDataSourceImpl implements InventoryRemoteDataSource {
   Stream<List<InventoryItemModel>> subscribeInventoryRealtime() {
     return _client
         .from(AppConstants.inventoryItemsTable)
-        .stream(primaryKey: ['id']).map(
-      (data) => data.map(InventoryItemModel.fromJson).toList(),
-    );
+        .stream(primaryKey: ['id'])
+        .map((data) => data.map(InventoryItemModel.fromJson).toList());
   }
 }

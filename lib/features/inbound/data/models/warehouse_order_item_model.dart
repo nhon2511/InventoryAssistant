@@ -1,6 +1,16 @@
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
 
 class WarehouseOrderItemModel {
+  const WarehouseOrderItemModel({
+    required this.id,
+    required this.orderId,
+    required this.productId,
+    required this.expectedQuantity,
+    required this.actualQuantity,
+    this.locationId,
+    this.lotNumber,
+    this.expiryDate,
+  });
 
   factory WarehouseOrderItemModel.fromJson(Map<String, dynamic> json) {
     return WarehouseOrderItemModel(
@@ -14,16 +24,6 @@ class WarehouseOrderItemModel {
       actualQuantity: json['actual_quantity'] as int? ?? 0,
     );
   }
-  const WarehouseOrderItemModel({
-    required this.id,
-    required this.orderId,
-    required this.productId,
-    required this.expectedQuantity,
-    required this.actualQuantity,
-    this.locationId,
-    this.lotNumber,
-    this.expiryDate,
-  });
 
   final String id;
   final String orderId;
@@ -61,4 +61,3 @@ class WarehouseOrderItemModel {
     );
   }
 }
-

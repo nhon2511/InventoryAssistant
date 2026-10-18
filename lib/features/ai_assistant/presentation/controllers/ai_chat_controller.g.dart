@@ -8,15 +8,12 @@ part of 'ai_chat_controller.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Controller managing the AI assistant chat conversation.
 
 @ProviderFor(AiChatController)
 final aiChatControllerProvider = AiChatControllerProvider._();
 
-/// Controller managing the AI assistant chat conversation.
 final class AiChatControllerProvider
     extends $NotifierProvider<AiChatController, AiChatState> {
-  /// Controller managing the AI assistant chat conversation.
   AiChatControllerProvider._()
     : super(
         from: null,
@@ -44,9 +41,7 @@ final class AiChatControllerProvider
   }
 }
 
-String _$aiChatControllerHash() => r'5957b4d6ea3d8738425e2e127dc1219ad4481c3b';
-
-/// Controller managing the AI assistant chat conversation.
+String _$aiChatControllerHash() => r'226a9cae00ba49dd255a6607d7c9cc2daa3b025d';
 
 abstract class _$AiChatController extends $Notifier<AiChatState> {
   AiChatState build();

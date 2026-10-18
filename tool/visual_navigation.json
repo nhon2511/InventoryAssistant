@@ -1,0 +1,170 @@
+[
+  [
+    "resize",
+    "1440",
+    "900"
+  ],
+  [
+    "navigate",
+    "http://127.0.0.1:8091"
+  ],
+  [
+    "eval",
+    "document.querySelector('flt-semantics-placeholder')?.click()"
+  ],
+  [
+    "fill",
+    "Email",
+    "admin@preview.local"
+  ],
+  [
+    "fill",
+    "M\u1eadt kh\u1ea9u",
+    "test"
+  ],
+  [
+    "click",
+    "\u0110\u0103ng nh\u1eadp"
+  ],
+  [
+    "resize",
+    "1440",
+    "900"
+  ],
+  [
+    "eval",
+    "({width:innerWidth,height:innerHeight})"
+  ],
+  [
+    "click",
+    "Tra m\u00e3 h\u00e0ng"
+  ],
+  [
+    "shot",
+    "docs/screenshots/scan-back-desktop.png"
+  ],
+  [
+    "click",
+    "Quay l\u1ea1i"
+  ],
+  [
+    "eval",
+    "({url:location.hash, scanVisible:document.querySelector('flt-semantics-host')?.textContent.includes('Tra m\u00e3 h\u00e0ng')})"
+  ],
+  [
+    "eval",
+    "location.hash='/inbound/new'"
+  ],
+  [
+    "fill",
+    "Ghi ch\u00fa (t\u00f9y ch\u1ecdn)",
+    "Ghi ch\u00fa gi\u1eef l\u1ea1i khi tra m\u00e3"
+  ],
+  [
+    "tap",
+    "100",
+    "641"
+  ],
+  [
+    "fill",
+    "M\u00e3 v\u1ea1ch s\u1ea3n ph\u1ea9m",
+    "893000000001"
+  ],
+  [
+    "click",
+    "OCR / s\u1ed1 l\u00f4"
+  ],
+  [
+    "shot",
+    "docs/screenshots/ocr-back-desktop.png"
+  ],
+  [
+    "click",
+    "Quay l\u1ea1i"
+  ],
+  [
+    "eval",
+    "({url:location.hash,inputs:[...document.querySelectorAll('input')].map(e=>({label:e.getAttribute('aria-label'),value:e.value}))})"
+  ],
+  [
+    "shot",
+    "docs/screenshots/scan-retained-input-desktop.png"
+  ],
+  [
+    "click",
+    "Quay l\u1ea1i"
+  ],
+  [
+    "eval",
+    "({url:location.hash,inputs:[...document.querySelectorAll('input,textarea')].map(e=>({label:e.getAttribute('aria-label'),value:e.value}))})"
+  ],
+  [
+    "shot",
+    "docs/screenshots/scan-retained-form-desktop.png"
+  ],
+  [
+    "eval",
+    "location.hash='/batch-scan'"
+  ],
+  [
+    "click",
+    "R\u1eddi phi\u1ebfu"
+  ],
+  [
+    "resize",
+    "390",
+    "844"
+  ],
+  [
+    "shot",
+    "docs/screenshots/scan-back-mobile.png"
+  ],
+  [
+    "click",
+    "Quay l\u1ea1i"
+  ],
+  [
+    "eval",
+    "({url:location.hash})"
+  ],
+  [
+    "eval",
+    "location.hash='/ocr-scan'"
+  ],
+  [
+    "shot",
+    "docs/screenshots/ocr-back-mobile.png"
+  ],
+  [
+    "click",
+    "Quay l\u1ea1i"
+  ],
+  [
+    "click",
+    "Quay l\u1ea1i"
+  ],
+  [
+    "eval",
+    "location.hash='/pick-verify/out-1'"
+  ],
+  [
+    "shot",
+    "docs/screenshots/pick-back-mobile.png"
+  ],
+  [
+    "click",
+    "Quay l\u1ea1i"
+  ],
+  [
+    "eval",
+    "({url:location.hash})"
+  ],
+  [
+    "eval",
+    "location.hash='/batch-scan'"
+  ],
+  [
+    "eval",
+    "location.reload()"
+  ]
+]

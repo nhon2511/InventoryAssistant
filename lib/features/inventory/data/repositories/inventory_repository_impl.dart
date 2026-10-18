@@ -64,9 +64,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
   }
 
   @override
-  FutureEither<List<InventoryItem>> getStockByProduct(
-    String productId,
-  ) async {
+  FutureEither<List<InventoryItem>> getStockByProduct(String productId) async {
     try {
       final models = await _remoteDataSource.getStockByProduct(productId);
       return Right(models.map((m) => m.toEntity()).toList());
@@ -88,7 +86,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
   @override
   Stream<List<InventoryItem>> subscribeInventoryRealtime() {
     return _remoteDataSource.subscribeInventoryRealtime().map(
-          (models) => models.map((m) => m.toEntity()).toList(),
-        );
+      (models) => models.map((m) => m.toEntity()).toList(),
+    );
   }
 }

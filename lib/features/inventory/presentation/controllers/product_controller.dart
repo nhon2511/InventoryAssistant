@@ -8,7 +8,7 @@ part 'product_controller.g.dart';
 
 @riverpod
 class ProductController extends _$ProductController {
-  late final GetAllProductsUseCase _getAllProducts;
+  late GetAllProductsUseCase _getAllProducts;
 
   @override
   Future<List<Product>> build() async {

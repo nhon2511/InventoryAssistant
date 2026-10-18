@@ -6,12 +6,12 @@ import 'package:flutter/material.dart';
 /// primary color (deep teal / blue-green).
 abstract final class AppColors {
   // ── Seed Color ────────────────────────────────────────────────────
-  static const Color seed = Color(0xFF1B6B5A);
+  static const Color seed = Color(0xFF2563EB);
 
   // ── Brand Colors ──────────────────────────────────────────────────
-  static const Color primary = Color(0xFF1B6B5A);
-  static const Color primaryLight = Color(0xFF4E9D8B);
-  static const Color primaryDark = Color(0xFF003D2E);
+  static const Color primary = Color(0xFF2563EB);
+  static const Color primaryLight = Color(0xFF60A5FA);
+  static const Color primaryDark = Color(0xFF14253D);
 
   // ── Semantic Colors ───────────────────────────────────────────────
   static const Color success = Color(0xFF2E7D32);
@@ -25,7 +25,7 @@ abstract final class AppColors {
   static const Color outOfStock = Color(0xFFD32F2F);
 
   // ── Surface Colors ────────────────────────────────────────────────
-  static const Color backgroundLight = Color(0xFFF5F7FA);
+  static const Color backgroundLight = Color(0xFFF5F7FB);
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color backgroundDark = Color(0xFF121212);
   static const Color surfaceDark = Color(0xFF1E1E1E);

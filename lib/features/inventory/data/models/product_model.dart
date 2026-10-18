@@ -1,6 +1,17 @@
 import 'package:smart_wms/features/inventory/domain/entities/product.dart';
 
 class ProductModel {
+  const ProductModel({
+    required this.id,
+    required this.sku,
+    required this.barcode,
+    required this.name,
+    required this.unit,
+    required this.minSafetyStock,
+    this.description,
+    this.createdAt,
+    this.updatedAt,
+  });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
@@ -15,17 +26,6 @@ class ProductModel {
       updatedAt: json['updated_at'] as String?,
     );
   }
-  const ProductModel({
-    required this.id,
-    required this.sku,
-    required this.barcode,
-    required this.name,
-    required this.unit,
-    required this.minSafetyStock,
-    this.description,
-    this.createdAt,
-    this.updatedAt,
-  });
 
   final String id;
   final String sku;
@@ -52,15 +52,14 @@ class ProductModel {
   }
 
   Product toEntity() => Product(
-        id: id,
-        sku: sku,
-        barcode: barcode,
-        name: name,
-        description: description,
-        unit: unit,
-        minSafetyStock: minSafetyStock,
-        createdAt: createdAt != null ? DateTime.tryParse(createdAt!) : null,
-        updatedAt: updatedAt != null ? DateTime.tryParse(updatedAt!) : null,
-      );
+    id: id,
+    sku: sku,
+    barcode: barcode,
+    name: name,
+    description: description,
+    unit: unit,
+    minSafetyStock: minSafetyStock,
+    createdAt: createdAt != null ? DateTime.tryParse(createdAt!) : null,
+    updatedAt: updatedAt != null ? DateTime.tryParse(updatedAt!) : null,
+  );
 }
-

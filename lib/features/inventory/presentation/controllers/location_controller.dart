@@ -8,7 +8,7 @@ part 'location_controller.g.dart';
 
 @riverpod
 class LocationController extends _$LocationController {
-  late final GetAllLocationsUseCase _getAllLocations;
+  late GetAllLocationsUseCase _getAllLocations;
 
   @override
   Future<List<Location>> build() async {

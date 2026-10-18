@@ -1,6 +1,15 @@
 import 'package:smart_wms/features/outbound/domain/entities/pick_list_item.dart';
 
 class PickListItemModel {
+  const PickListItemModel({
+    required this.productId,
+    required this.productName,
+    required this.barcode,
+    required this.locationLabel,
+    required this.expectedQuantity,
+    required this.pickedQuantity,
+    this.lotNumber,
+  });
 
   factory PickListItemModel.fromJson(Map<String, dynamic> json) {
     return PickListItemModel(
@@ -13,15 +22,6 @@ class PickListItemModel {
       pickedQuantity: json['picked_quantity'] as int? ?? 0,
     );
   }
-  const PickListItemModel({
-    required this.productId,
-    required this.productName,
-    required this.barcode,
-    required this.locationLabel,
-    required this.expectedQuantity,
-    required this.pickedQuantity,
-    this.lotNumber,
-  });
 
   final String productId;
   final String productName;
@@ -53,4 +53,3 @@ class PickListItemModel {
         pickedQuantity: pickedQuantity,
       );
 }
-
