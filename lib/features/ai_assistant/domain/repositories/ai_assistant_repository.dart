@@ -1,4 +1,5 @@
 import 'package:smart_wms/core/utils/typedefs.dart';
+import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/parsed_intent.dart';
 
 /// Abstract repository contract for AI assistant operations.
@@ -8,4 +9,7 @@ abstract class AiAssistantRepository {
 
   /// Queries stock information based on parsed entities.
   FutureEither<String> queryStock(Map<String, String> entities);
+
+  /// Creates a draft order from parsed AI entities for human review.
+  FutureEither<OrderDraft> createDraftOrder(Map<String, String> entities);
 }

@@ -1,6 +1,16 @@
 import 'package:smart_wms/features/inventory/domain/entities/inventory_item.dart';
 
 class InventoryItemModel {
+  const InventoryItemModel({
+    required this.id,
+    required this.productId,
+    required this.locationId,
+    required this.quantityOnHand,
+    required this.quantityReserved,
+    this.lotNumber,
+    this.expiryDate,
+    this.updatedAt,
+  });
 
   factory InventoryItemModel.fromJson(Map<String, dynamic> json) {
     return InventoryItemModel(
@@ -14,16 +24,6 @@ class InventoryItemModel {
       updatedAt: json['updated_at'] as String?,
     );
   }
-  const InventoryItemModel({
-    required this.id,
-    required this.productId,
-    required this.locationId,
-    required this.quantityOnHand,
-    required this.quantityReserved,
-    this.lotNumber,
-    this.expiryDate,
-    this.updatedAt,
-  });
 
   final String id;
   final String productId;
@@ -62,4 +62,3 @@ class InventoryItemModel {
     );
   }
 }
-

@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 abstract class AiRemoteDataSource {
   Future<Map<String, dynamic>> parseIntent(String userText);
   Future<String> queryStock(Map<String, String> entities);
+  Future<Map<String, dynamic>> createDraftOrder(Map<String, String> entities);
 }
 
 class AiRemoteDataSourceImpl implements AiRemoteDataSource {
@@ -42,6 +43,25 @@ class AiRemoteDataSourceImpl implements AiRemoteDataSource {
     } on FunctionException catch (e) {
       throw AiException(
         message: e.details?.toString() ?? 'Lỗi truy vấn tồn kho',
+        statusCode: e.status,
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> createDraftOrder(
+    Map<String, String> entities,
+  ) async {
+    try {
+      final response = await _client.functions.invoke(
+        AppConstants.createDraftOrderFunction,
+        body: entities,
+      );
+      final data = response.data as Map<String, dynamic>;
+      return data;
+    } on FunctionException catch (e) {
+      throw AiException(
+        message: e.details?.toString() ?? 'Lỗi tạo phiếu nháp',
         statusCode: e.status,
       );
     }

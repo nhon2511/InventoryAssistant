@@ -1,6 +1,16 @@
 import 'package:smart_wms/features/inventory/domain/entities/location.dart';
 
 class LocationModel {
+  const LocationModel({
+    required this.id,
+    required this.zoneCode,
+    required this.aisleCode,
+    required this.rackCode,
+    required this.binCode,
+    required this.locationBarcode,
+    this.maxCapacityKg,
+    this.createdAt,
+  });
 
   factory LocationModel.fromJson(Map<String, dynamic> json) {
     return LocationModel(
@@ -14,16 +24,6 @@ class LocationModel {
       createdAt: json['created_at'] as String?,
     );
   }
-  const LocationModel({
-    required this.id,
-    required this.zoneCode,
-    required this.aisleCode,
-    required this.rackCode,
-    required this.binCode,
-    required this.locationBarcode,
-    this.maxCapacityKg,
-    this.createdAt,
-  });
 
   final String id;
   final String zoneCode;
@@ -58,4 +58,3 @@ class LocationModel {
         createdAt: createdAt != null ? DateTime.tryParse(createdAt!) : null,
       );
 }
-

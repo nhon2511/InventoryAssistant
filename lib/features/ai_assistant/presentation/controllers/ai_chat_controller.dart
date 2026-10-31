@@ -1,6 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:smart_wms/core/di/ai_assistant_providers.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/chat_message.dart';
+import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft.dart';
+import 'package:smart_wms/features/ai_assistant/domain/usecases/create_draft_order_usecase.dart';
 import 'package:smart_wms/features/ai_assistant/domain/usecases/parse_intent_usecase.dart';
 import 'package:smart_wms/features/ai_assistant/domain/usecases/query_stock_usecase.dart';
 
@@ -11,11 +13,13 @@ part 'ai_chat_controller.g.dart';
 class AiChatController extends _$AiChatController {
   late final ParseIntentUseCase _parseIntent;
   late final QueryStockUseCase _queryStock;
+  late final CreateDraftOrderUseCase _createDraftOrder;
 
   @override
   AiChatState build() {
     _parseIntent = ref.watch(parseIntentUseCaseProvider);
     _queryStock = ref.watch(queryStockUseCaseProvider);
+    _createDraftOrder = ref.watch(createDraftOrderUseCaseProvider);
 
     return const AiChatState();
   }
@@ -38,44 +42,109 @@ class AiChatController extends _$AiChatController {
     // Step 1: Parse intent via LLM Edge Function.
     final intentResult = await _parseIntent(userText);
 
-    final response = await intentResult.fold(
-      (failure) async => failure.message,
+    await intentResult.fold(
+      (failure) async {
+        final errorMessage = ChatMessage(
+          role: ChatRole.assistant,
+          content: failure.message,
+          timestamp: DateTime.now(),
+        );
+        state = state.copyWith(
+          messages: [...state.messages, errorMessage],
+          isProcessing: false,
+        );
+      },
       (intent) async {
         if (!intent.isConfident) {
-          return 'Xin lỗi, tôi không hiểu rõ yêu cầu. '
-              'Bạn có thể nói rõ hơn được không?';
+          final msg = ChatMessage(
+            role: ChatRole.assistant,
+            content: 'Xin lỗi, tôi không hiểu rõ yêu cầu. '
+                'Bạn có thể nói rõ hơn được không?',
+            timestamp: DateTime.now(),
+          );
+          state = state.copyWith(
+            messages: [...state.messages, msg],
+            isProcessing: false,
+          );
+          return;
         }
 
         // Step 2: Execute action based on intent.
-        return switch (intent.intent) {
-          'query_stock' => await _handleQueryStock(intent.entities),
-          'create_order' =>
-            'Chức năng tạo đơn qua giọng nói '
-                'sẽ sớm được hỗ trợ.',
-          _ =>
-            'Tôi nhận được yêu cầu "${intent.intent}" '
-                'nhưng chưa hỗ trợ xử lý.',
-        };
+        switch (intent.intent) {
+          case 'query_stock':
+            await _handleQueryStock(intent.entities);
+          case 'create_order':
+            await _handleCreateOrder(intent.entities);
+          default:
+            final msg = ChatMessage(
+              role: ChatRole.assistant,
+              content: 'Tôi nhận được yêu cầu "${intent.intent}" '
+                  'nhưng chưa hỗ trợ xử lý.',
+              timestamp: DateTime.now(),
+            );
+            state = state.copyWith(
+              messages: [...state.messages, msg],
+              isProcessing: false,
+            );
+        }
       },
     );
+  }
 
-    // Add assistant response.
-    final assistantMessage = ChatMessage(
+  Future<void> _handleQueryStock(Map<String, String> entities) async {
+    final result = await _queryStock(entities);
+    final content = result.fold(
+      (failure) => 'Lỗi khi truy vấn: ${failure.message}',
+      (answer) => answer,
+    );
+
+    final msg = ChatMessage(
       role: ChatRole.assistant,
-      content: response,
+      content: content,
       timestamp: DateTime.now(),
     );
     state = state.copyWith(
-      messages: [...state.messages, assistantMessage],
+      messages: [...state.messages, msg],
       isProcessing: false,
     );
   }
 
-  Future<String> _handleQueryStock(Map<String, String> entities) async {
-    final result = await _queryStock(entities);
-    return result.fold(
-      (failure) => 'Lỗi khi truy vấn: ${failure.message}',
-      (answer) => answer,
+  Future<void> _handleCreateOrder(Map<String, String> entities) async {
+    final result = await _createDraftOrder(entities);
+    result.fold(
+      (failure) {
+        final msg = ChatMessage(
+          role: ChatRole.assistant,
+          content: 'Không thể tạo phiếu nháp: ${failure.message}',
+          timestamp: DateTime.now(),
+        );
+        state = state.copyWith(
+          messages: [...state.messages, msg],
+          isProcessing: false,
+        );
+      },
+      (draft) {
+        final msg = ChatMessage(
+          role: ChatRole.assistant,
+          content: 'AI đã tạo bản nháp **${draft.orderTypeLabel}** '
+              'với ${draft.items.length} mặt hàng. '
+              'Vui lòng kiểm tra và xác nhận bên dưới.',
+          timestamp: DateTime.now(),
+        );
+        state = state.copyWith(
+          messages: [...state.messages, msg],
+          isProcessing: false,
+          pendingDraft: draft,
+        );
+      },
+    );
+  }
+
+  /// Clears the pending draft after confirmation or cancellation.
+  void clearDraft() {
+    state = AiChatState(
+      messages: state.messages,
+      isProcessing: state.isProcessing,
     );
   }
 
@@ -87,15 +156,25 @@ class AiChatController extends _$AiChatController {
 
 /// State for the AI chat conversation.
 class AiChatState {
-  const AiChatState({this.messages = const [], this.isProcessing = false});
+  const AiChatState({
+    this.messages = const [],
+    this.isProcessing = false,
+    this.pendingDraft,
+  });
 
   final List<ChatMessage> messages;
   final bool isProcessing;
+  final OrderDraft? pendingDraft;
 
-  AiChatState copyWith({List<ChatMessage>? messages, bool? isProcessing}) {
+  AiChatState copyWith({
+    List<ChatMessage>? messages,
+    bool? isProcessing,
+    OrderDraft? pendingDraft,
+  }) {
     return AiChatState(
       messages: messages ?? this.messages,
       isProcessing: isProcessing ?? this.isProcessing,
+      pendingDraft: pendingDraft ?? this.pendingDraft,
     );
   }
 }

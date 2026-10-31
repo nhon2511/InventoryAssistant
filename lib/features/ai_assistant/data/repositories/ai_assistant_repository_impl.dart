@@ -3,6 +3,7 @@ import 'package:smart_wms/core/errors/exceptions.dart';
 import 'package:smart_wms/core/errors/failures.dart';
 import 'package:smart_wms/core/utils/typedefs.dart';
 import 'package:smart_wms/features/ai_assistant/data/datasources/ai_remote_datasource.dart';
+import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/parsed_intent.dart';
 import 'package:smart_wms/features/ai_assistant/domain/repositories/ai_assistant_repository.dart';
 
@@ -33,6 +34,36 @@ class AiAssistantRepositoryImpl implements AiAssistantRepository {
     try {
       final result = await _remoteDataSource.queryStock(entities);
       return Right(result);
+    } on AiException catch (e) {
+      return Left(AiFailure(message: e.message, statusCode: e.statusCode));
+    }
+  }
+
+  @override
+  FutureEither<OrderDraft> createDraftOrder(
+    Map<String, String> entities,
+  ) async {
+    try {
+      final data = await _remoteDataSource.createDraftOrder(entities);
+
+      final orderType = data['order_type'] as String? ?? 'inbound';
+      final note = data['note'] as String?;
+      final rawItems = data['items'] as List<dynamic>? ?? [];
+
+      final items = rawItems.map((item) {
+        final map = item as Map<String, dynamic>;
+        return OrderDraftItem(
+          productName: map['product_name'] as String? ?? '',
+          quantity: map['quantity'] as int? ?? 0,
+          sku: map['sku'] as String?,
+          locationLabel: map['location'] as String?,
+          lotNumber: map['lot_number'] as String?,
+        );
+      }).toList();
+
+      return Right(
+        OrderDraft(orderType: orderType, items: items, note: note),
+      );
     } on AiException catch (e) {
       return Left(AiFailure(message: e.message, statusCode: e.statusCode));
     }

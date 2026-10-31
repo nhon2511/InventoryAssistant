@@ -20,6 +20,7 @@ abstract final class AppConstants {
   // ── Supabase Edge Function Slugs ──────────────────────────────────
   static const String parseIntentFunction = 'parse-intent';
   static const String queryStockFunction = 'query-stock';
+  static const String createDraftOrderFunction = 'create-draft-order';
 
   // ── Order Code Prefixes ───────────────────────────────────────────
   static const String inboundPrefix = 'INB';

@@ -3,6 +3,17 @@ import 'package:smart_wms/core/enums/order_type.dart';
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
 
 class WarehouseOrderModel {
+  const WarehouseOrderModel({
+    required this.id,
+    required this.orderCode,
+    required this.type,
+    required this.status,
+    this.createdBy,
+    this.approvedBy,
+    this.note,
+    this.createdAt,
+    this.updatedAt,
+  });
 
   factory WarehouseOrderModel.fromJson(Map<String, dynamic> json) {
     return WarehouseOrderModel(
@@ -17,17 +28,6 @@ class WarehouseOrderModel {
       updatedAt: json['updated_at'] as String?,
     );
   }
-  const WarehouseOrderModel({
-    required this.id,
-    required this.orderCode,
-    required this.type,
-    required this.status,
-    this.createdBy,
-    this.approvedBy,
-    this.note,
-    this.createdAt,
-    this.updatedAt,
-  });
 
   final String id;
   final String orderCode;
@@ -68,4 +68,3 @@ class WarehouseOrderModel {
     );
   }
 }
-
