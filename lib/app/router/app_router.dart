@@ -18,6 +18,7 @@ import 'package:smart_wms/features/inventory/presentation/widgets/stock_overview
 import 'package:smart_wms/features/outbound/presentation/widgets/outbound_detail_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/outbound_list_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/pick_verify_screen.dart';
+import 'package:smart_wms/features/reports/presentation/widgets/reports_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -145,6 +146,11 @@ final _mainShellRoute = ShellRoute(
       name: RouteNames.aiChat,
       builder: (context, state) => const AiChatScreen(),
     ),
+    GoRoute(
+      path: '/reports',
+      name: RouteNames.reports,
+      builder: (context, state) => const ReportsScreen(),
+    ),
   ],
 );
 
@@ -183,6 +189,11 @@ class _MainShell extends StatelessWidget {
             label: 'Xuất kho',
           ),
           NavigationDestination(
+            icon: Icon(Icons.assessment_outlined),
+            selectedIcon: Icon(Icons.assessment),
+            label: 'Báo cáo',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.smart_toy_outlined),
             selectedIcon: Icon(Icons.smart_toy),
             label: 'AI',
@@ -199,7 +210,8 @@ class _MainShell extends StatelessWidget {
     }
     if (location.startsWith('/inbound')) return 2;
     if (location.startsWith('/outbound')) return 3;
-    if (location.startsWith('/ai-chat')) return 4;
+    if (location.startsWith('/reports')) return 4;
+    if (location.startsWith('/ai-chat')) return 5;
     return 0;
   }
 
@@ -214,6 +226,8 @@ class _MainShell extends StatelessWidget {
       case 3:
         context.goNamed(RouteNames.outboundList);
       case 4:
+        context.goNamed(RouteNames.reports);
+      case 5:
         context.goNamed(RouteNames.aiChat);
     }
   }

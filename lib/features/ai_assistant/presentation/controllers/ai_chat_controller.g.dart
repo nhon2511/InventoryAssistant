@@ -44,7 +44,7 @@ final class AiChatControllerProvider
   }
 }
 
-String _$aiChatControllerHash() => r'd13974eee8566f395ec59e8945d816db6ca78e33';
+String _$aiChatControllerHash() => r'085f405d9c70031bf4e287ec851e7172fd91b4c7';
 
 /// Controller managing the AI assistant chat conversation.
 
