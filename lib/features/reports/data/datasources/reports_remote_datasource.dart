@@ -17,23 +17,19 @@ class ReportsRemoteDataSourceImpl implements ReportsRemoteDataSource {
   @override
   Future<List<ReportItemModel>> getReportItems() async {
     try {
-      // Fetch all products
       final products = await _client
           .from(AppConstants.productsTable)
           .select()
           .order('name');
 
-      // Fetch all inventory items
       final inventoryItems = await _client
           .from(AppConstants.inventoryItemsTable)
           .select();
 
-      // Fetch all locations for label lookup
       final locations = await _client
           .from(AppConstants.locationsTable)
           .select();
 
-      // Build location label map
       final locationMap = <String, String>{};
       for (final loc in locations) {
         final id = loc['id'] as String;
@@ -44,7 +40,6 @@ class ReportsRemoteDataSourceImpl implements ReportsRemoteDataSource {
         locationMap[id] = '$zone-$aisle-$rack-$bin';
       }
 
-      // Aggregate inventory by product
       final stockMap = <String, _AggregatedStock>{};
       for (final inv in inventoryItems) {
         final productId = inv['product_id'] as String;
@@ -69,7 +64,6 @@ class ReportsRemoteDataSourceImpl implements ReportsRemoteDataSource {
         }
       }
 
-      // Build report items
       return products.map((p) {
         final productId = p['id'] as String;
         final stock = stockMap[productId];
@@ -91,7 +85,6 @@ class ReportsRemoteDataSourceImpl implements ReportsRemoteDataSource {
   }
 }
 
-/// Internal helper to accumulate stock quantities per product.
 class _AggregatedStock {
   _AggregatedStock({
     required this.totalOnHand,
@@ -103,3 +96,4 @@ class _AggregatedStock {
   int totalReserved;
   List<String> locations;
 }
+
