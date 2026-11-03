@@ -22,7 +22,6 @@ class GeneratePdfUseCase {
     try {
       final pdf = pw.Document();
       final now = DateTime.now();
-          footer: _buildFooter,
       final dateStr = DateFormat('dd/MM/yyyy HH:mm').format(now);
 
       pdf.addPage(
@@ -30,7 +29,7 @@ class GeneratePdfUseCase {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           header: (context) => _buildHeader(dateStr),
-          footer: (context) => _buildFooter(context),
+          footer: _buildFooter,
           build: (context) => [
             _buildSummarySection(summary),
             pw.SizedBox(height: 16),
@@ -42,14 +41,6 @@ class GeneratePdfUseCase {
       );
 
       final bytes = await pdf.save();
-      final bytes = await pdf.save();
-      return Right(bytes);
-    } on Exception catch (e) {
-      return Left(
-        CacheFailure(message: 'Lỗi khi tạo PDF: ${e.toString()}'),
-      );
-    }
-  }
       return Right(bytes);
     } catch (e) {
       return Left(
