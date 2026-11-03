@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:smart_wms/features/outbound/domain/entities/pick_list_item.dart';
+import 'package:smart_wms/features/outbound/domain/usecases/verify_scanned_item_usecase.dart';
+import 'package:smart_wms/features/outbound/presentation/controllers/pick_verify_controller.dart';
+import 'package:vibration/vibration.dart';
 
-/// Full-screen pick verification screen for outbound orders.
-///
-/// Scans barcodes and verifies against the pick list.
-/// Shows error modal (red) when barcode mismatches (PRD Story 2 AC).
-class PickVerifyScreen extends StatelessWidget {
+class PickVerifyScreen extends ConsumerStatefulWidget {
   const PickVerifyScreen({required this.orderId, super.key});
-
   final String orderId;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Quét đối soát xuất kho')),
-      body: Center(
-        child: Text('Pick Verify for Order: $orderId'),
-        // TODO: Implement pick verification scanner with error modal
-      ),
-    );
-  }
+  ConsumerState<PickVerifyScreen> createState() => _PickVerifyScreenState();
 }
+
