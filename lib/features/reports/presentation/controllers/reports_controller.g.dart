@@ -33,7 +33,7 @@ final class ReportsControllerProvider
   ReportsController create() => ReportsController();
 }
 
-String _$reportsControllerHash() => r'f697664aeb61128080a33c76e137f60c6e638dba';
+String _$reportsControllerHash() => r'0fa18b0b31be64a2eb821c765031018b669d1bb2';
 
 abstract class _$ReportsController extends $AsyncNotifier<InventorySummary> {
   FutureOr<InventorySummary> build();
