@@ -9,6 +9,7 @@ import 'package:smart_wms/core/di/auth_providers.dart';
 import 'package:smart_wms/core/di/inbound_providers.dart';
 import 'package:smart_wms/core/di/inventory_providers.dart';
 import 'package:smart_wms/core/di/outbound_providers.dart';
+import 'package:smart_wms/core/di/reports_providers.dart';
 import 'package:smart_wms/core/enums/order_type.dart';
 import 'package:smart_wms/core/errors/failures.dart';
 import 'package:smart_wms/core/preview/preview_ai_repository.dart';
@@ -47,6 +48,7 @@ Widget harness(
     inventoryRepositoryProvider.overrideWithValue(repository),
     inboundRepositoryProvider.overrideWithValue(repository),
     outboundRepositoryProvider.overrideWithValue(repository),
+    reportsRepositoryProvider.overrideWithValue(repository),
     inventoryMaintenanceRepositoryProvider.overrideWithValue(repository),
     orderWorkflowRepositoryProvider.overrideWithValue(repository),
     frontendPreviewProvider.overrideWithValue(true),

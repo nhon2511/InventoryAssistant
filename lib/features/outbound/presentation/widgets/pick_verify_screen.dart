@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:smart_wms/core/widgets/scanner_back_button.dart';
 import 'package:smart_wms/features/outbound/domain/entities/pick_list_item.dart';
 import 'package:smart_wms/features/outbound/domain/usecases/verify_scanned_item_usecase.dart';
 import 'package:smart_wms/features/outbound/presentation/controllers/pick_verify_controller.dart';
@@ -94,6 +95,7 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: ScannerBackButton(fallback: '/outbound/${widget.orderId}'),
         title: Text('Xác nhận phiếu ${widget.orderId}'),
         actions: [
           IconButton(

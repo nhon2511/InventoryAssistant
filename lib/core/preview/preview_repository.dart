@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:fpdart/fpdart.dart';
 import 'package:smart_wms/core/enums/order_status.dart';
 import 'package:smart_wms/core/enums/order_type.dart';
+import 'package:smart_wms/core/enums/stock_status.dart';
 import 'package:smart_wms/core/enums/user_role.dart';
 import 'package:smart_wms/core/errors/failures.dart';
 import 'package:smart_wms/core/utils/typedefs.dart';
@@ -17,6 +18,9 @@ import 'package:smart_wms/features/inventory/domain/repositories/inventory_maint
 import 'package:smart_wms/features/inventory/domain/repositories/inventory_repository.dart';
 import 'package:smart_wms/features/orders/domain/repositories/order_workflow_repository.dart';
 import 'package:smart_wms/features/outbound/domain/repositories/outbound_repository.dart';
+import 'package:smart_wms/features/reports/domain/entities/inventory_summary.dart';
+import 'package:smart_wms/features/reports/domain/entities/report_item.dart';
+import 'package:smart_wms/features/reports/domain/repositories/reports_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'package:uuid/uuid.dart';
 
@@ -28,7 +32,8 @@ class PreviewRepository
         InventoryMaintenanceRepository,
         InboundRepository,
         OutboundRepository,
-        OrderWorkflowRepository {
+        OrderWorkflowRepository,
+        ReportsRepository {
   PreviewRepository({bool showcase = false}) {
     orders.addAll([
       WarehouseOrder(
@@ -278,6 +283,58 @@ class PreviewRepository
   @override
   FutureEither<List<InventoryItem>> getAllInventoryItems() async =>
       Right(List.unmodifiable(stock));
+
+  @override
+  FutureEither<InventorySummary> getReportData() async {
+    final items = products.map((product) {
+      final productStock = stock.where((item) => item.productId == product.id);
+      final totalOnHand = productStock.fold<int>(
+        0,
+        (sum, item) => sum + item.quantityOnHand,
+      );
+      final totalReserved = productStock.fold<int>(
+        0,
+        (sum, item) => sum + item.quantityReserved,
+      );
+      final locations = productStock
+          .map((item) => item.locationLabel)
+          .toSet()
+          .join(', ');
+
+      return ReportItem(
+        productId: product.id,
+        sku: product.sku,
+        productName: product.name,
+        category: product.unit,
+        totalOnHand: totalOnHand,
+        totalReserved: totalReserved,
+        minSafetyStock: product.minSafetyStock,
+        locationLabel: locations.isEmpty ? 'N/A' : locations,
+        status: StockStatus.fromQuantity(
+          quantityOnHand: totalOnHand,
+          minSafetyStock: product.minSafetyStock,
+        ),
+      );
+    }).toList();
+
+    return Right(
+      InventorySummary(
+        totalProducts: items.length,
+        totalStockQuantity: items.fold(
+          0,
+          (sum, item) => sum + item.totalOnHand,
+        ),
+        lowStockCount: items
+            .where((item) => item.status == StockStatus.lowStock)
+            .length,
+        outOfStockCount: items
+            .where((item) => item.status == StockStatus.outOfStock)
+            .length,
+        items: items,
+      ),
+    );
+  }
+
   @override
   Stream<List<InventoryItem>> subscribeInventoryRealtime() async* {
     yield List.unmodifiable(stock);
