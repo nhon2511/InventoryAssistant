@@ -1,7 +1,7 @@
 /// Stock safety status for report display.
 ///
 /// Derived by comparing current quantity on hand against
-/// the product's [minSafetyStock] threshold.
+/// the product's minSafetyStock threshold.
 enum StockStatus {
   inStock('Đủ hàng'),
   lowStock('Sắp hết'),

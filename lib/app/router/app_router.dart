@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -204,6 +203,9 @@ final _mainShellRoute = ShellRoute(
 );
 
 /// Main app shell with bottom navigation bar.
+// Kept as a local fallback for router previews; production routing uses
+// MainShell from main_shell.dart.
+// ignore: unused_element
 class _MainShell extends StatelessWidget {
   const _MainShell({required this.child});
 

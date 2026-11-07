@@ -32,16 +32,14 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final title = Text(
                   'Biến động tồn kho',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                SegmentedButton<_ChartPeriod>(
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                );
+                final period = SegmentedButton<_ChartPeriod>(
                   segments: const [
                     ButtonSegment(
                       value: _ChartPeriod.week,
@@ -60,8 +58,19 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
                     visualDensity: VisualDensity.compact,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                ),
-              ],
+                );
+
+                if (constraints.maxWidth < 520) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [title, const SizedBox(height: 8), period],
+                  );
+                }
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [title, period],
+                );
+              },
             ),
             const SizedBox(height: 8),
             _buildLegend(),
@@ -69,9 +78,7 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
             SizedBox(
               height: 220,
               child: displayItems.isEmpty
-                  ? const Center(
-                      child: Text('Không có dữ liệu để hiển thị'),
-                    )
+                  ? const Center(child: Text('Không có dữ liệu để hiển thị'))
                   : BarChart(_buildChartData(displayItems)),
             ),
           ],
@@ -88,13 +95,13 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
   }
 
   Widget _buildLegend() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 12,
+      runSpacing: 8,
       children: [
         _legendDot(AppColors.inStock, 'Tồn kho'),
-        const SizedBox(width: 16),
         _legendDot(AppColors.lowStock, 'Đã giữ'),
-        const SizedBox(width: 16),
         _legendDot(AppColors.info, 'Khả dụng'),
       ],
     );
@@ -123,10 +130,11 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
       0,
       (maxVal, item) => max(maxVal, item.totalOnHand),
     );
+    final chartMaxY = max(1, (maxY * 1.2).ceil());
 
     return BarChartData(
       alignment: BarChartAlignment.spaceAround,
-      maxY: (maxY * 1.2).ceilToDouble(),
+      maxY: chartMaxY.toDouble(),
       barTouchData: BarTouchData(
         touchTooltipData: BarTouchTooltipData(
           getTooltipItem: (group, groupIndex, rod, rodIndex) {
@@ -140,7 +148,6 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
         ),
       ),
       titlesData: FlTitlesData(
-        show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -151,8 +158,9 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
                 return const SizedBox.shrink();
               }
               final name = items[index].productName;
-              final display =
-                  name.length > 6 ? '${name.substring(0, 6)}...' : name;
+              final display = name.length > 6
+                  ? '${name.substring(0, 6)}...'
+                  : name;
               return SideTitleWidget(
                 meta: meta,
                 space: 4,
@@ -182,9 +190,8 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
       ),
       borderData: FlBorderData(show: false),
       gridData: FlGridData(
-        show: true,
         drawVerticalLine: false,
-        horizontalInterval: max(1, maxY / 5).toDouble(),
+        horizontalInterval: max(1, chartMaxY / 5).toDouble(),
       ),
       barGroups: items.asMap().entries.map((entry) {
         final index = entry.key;
@@ -222,4 +229,3 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
     );
   }
 }
-

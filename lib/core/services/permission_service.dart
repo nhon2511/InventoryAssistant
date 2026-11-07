@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// Trạng thái quyền tùy chỉnh rõ ràng theo yêu cầu Smart WMS.
-enum AppPermissionStatus {
-  granted,
-  denied,
-  permanentlyDenied,
-}
+enum AppPermissionStatus { granted, denied, permanentlyDenied }
 
 /// Dịch vụ quản lý quyền Camera và Microphone cho ứng dụng Smart WMS.
 class PermissionService {
@@ -37,7 +33,9 @@ class PermissionService {
     final status = await Permission.camera.request();
     final appStatus = _mapStatus(status);
 
-    if (appStatus == AppPermissionStatus.permanentlyDenied && context != null && context.mounted) {
+    if (appStatus == AppPermissionStatus.permanentlyDenied &&
+        context != null &&
+        context.mounted) {
       _showSettingsDialog(
         context,
         title: 'Quyền Camera bị chặn',
@@ -62,7 +60,9 @@ class PermissionService {
     final status = await Permission.microphone.request();
     final appStatus = _mapStatus(status);
 
-    if (appStatus == AppPermissionStatus.permanentlyDenied && context != null && context.mounted) {
+    if (appStatus == AppPermissionStatus.permanentlyDenied &&
+        context != null &&
+        context.mounted) {
       _showSettingsDialog(
         context,
         title: 'Quyền Microphone bị chặn',
@@ -77,10 +77,7 @@ class PermissionService {
   Future<Map<String, AppPermissionStatus>> checkAllPermissions() async {
     final cameraStatus = await checkCameraPermission();
     final micStatus = await checkMicrophonePermission();
-    return {
-      'camera': cameraStatus,
-      'microphone': micStatus,
-    };
+    return {'camera': cameraStatus, 'microphone': micStatus};
   }
 
   /// Yêu cầu đồng thời cả Camera và Microphone
@@ -88,13 +85,14 @@ class PermissionService {
     BuildContext? context,
     VoidCallback? onPermanentlyDenied,
   }) async {
-    final statuses = await [
-      Permission.camera,
-      Permission.microphone,
-    ].request();
+    final statuses = await [Permission.camera, Permission.microphone].request();
 
-    final cameraStatus = _mapStatus(statuses[Permission.camera] ?? PermissionStatus.denied);
-    final micStatus = _mapStatus(statuses[Permission.microphone] ?? PermissionStatus.denied);
+    final cameraStatus = _mapStatus(
+      statuses[Permission.camera] ?? PermissionStatus.denied,
+    );
+    final micStatus = _mapStatus(
+      statuses[Permission.microphone] ?? PermissionStatus.denied,
+    );
 
     if ((cameraStatus == AppPermissionStatus.permanentlyDenied ||
             micStatus == AppPermissionStatus.permanentlyDenied) &&
@@ -108,10 +106,7 @@ class PermissionService {
       );
     }
 
-    return {
-      'camera': cameraStatus,
-      'microphone': micStatus,
-    };
+    return {'camera': cameraStatus, 'microphone': micStatus};
   }
 
   /// Hiển thị hộp thoại hướng dẫn mở App Settings khi quyền bị chặn vĩnh viễn
@@ -148,4 +143,3 @@ class PermissionService {
     );
   }
 }
-
