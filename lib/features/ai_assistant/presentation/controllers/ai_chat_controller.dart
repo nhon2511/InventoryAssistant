@@ -1,6 +1,9 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:smart_wms/core/di/ai_assistant_providers.dart';
+import 'package:smart_wms/core/di/inventory_providers.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/chat_message.dart';
+import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft_preview.dart';
+import 'package:smart_wms/features/ai_assistant/domain/usecases/resolve_order_draft_usecase.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft.dart';
 import 'package:smart_wms/features/ai_assistant/domain/usecases/create_draft_order_usecase.dart';
 import 'package:smart_wms/features/ai_assistant/domain/usecases/parse_intent_usecase.dart';
@@ -8,7 +11,6 @@ import 'package:smart_wms/features/ai_assistant/domain/usecases/query_stock_usec
 
 part 'ai_chat_controller.g.dart';
 
-/// Controller managing the AI assistant chat conversation.
 @riverpod
 class AiChatController extends _$AiChatController {
   late final ParseIntentUseCase _parseIntent;
@@ -24,18 +26,18 @@ class AiChatController extends _$AiChatController {
     return const AiChatState();
   }
 
-  /// Processes a user message: parse intent → execute action → respond.
   Future<void> sendMessage(String userText) async {
-    if (userText.trim().isEmpty) return;
-
-    // Add user message to chat history.
-    final userMessage = ChatMessage(
-      role: ChatRole.user,
-      content: userText,
-      timestamp: DateTime.now(),
-    );
-    state = state.copyWith(
-      messages: [...state.messages, userMessage],
+    if (userText.trim().isEmpty || state.isProcessing) return;
+    final text = userText.trim();
+    state = AiChatState(
+      messages: [
+        ...state.messages,
+        ChatMessage(
+          role: ChatRole.user,
+          content: text,
+          timestamp: DateTime.now(),
+        ),
+      ],
       isProcessing: true,
     );
 
@@ -150,11 +152,16 @@ class AiChatController extends _$AiChatController {
 
   /// Clears the chat history.
   void clearChat() {
-    state = const AiChatState();
+    if (!state.isProcessing) state = const AiChatState();
   }
+
+  void dismissDraft() => state = AiChatState(
+    messages: state.messages,
+    error: state.error,
+    lastFailedText: state.lastFailedText,
+  );
 }
 
-/// State for the AI chat conversation.
 class AiChatState {
   const AiChatState({
     this.messages = const [],

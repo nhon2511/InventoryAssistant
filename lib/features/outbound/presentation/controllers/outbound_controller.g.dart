@@ -34,7 +34,7 @@ final class OutboundControllerProvider
 }
 
 String _$outboundControllerHash() =>
-    r'72dbc950ef49e8112366114c546093f301849dc1';
+    r'd595edac48b91afc46a170fa4e12e0cffa215cdb';
 
 abstract class _$OutboundController
     extends $AsyncNotifier<List<WarehouseOrder>> {

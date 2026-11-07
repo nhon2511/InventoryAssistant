@@ -1,11 +1,15 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:smart_wms/app/router/main_shell.dart';
 import 'package:smart_wms/app/router/route_names.dart';
+import 'package:smart_wms/core/enums/order_type.dart';
+import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft_preview.dart';
 import 'package:smart_wms/features/ai_assistant/presentation/widgets/ai_chat_screen.dart';
 import 'package:smart_wms/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:smart_wms/features/auth/presentation/states/auth_state.dart';
 import 'package:smart_wms/features/auth/presentation/widgets/login_screen.dart';
+import 'package:smart_wms/features/auth/presentation/widgets/profile_screen.dart';
 import 'package:smart_wms/features/auth/presentation/widgets/register_screen.dart';
 import 'package:smart_wms/features/inbound/presentation/widgets/batch_scan_screen.dart';
 import 'package:smart_wms/features/inbound/presentation/widgets/inbound_detail_screen.dart';
@@ -15,6 +19,7 @@ import 'package:smart_wms/features/inventory/presentation/widgets/location_list_
 import 'package:smart_wms/features/inventory/presentation/widgets/product_detail_screen.dart';
 import 'package:smart_wms/features/inventory/presentation/widgets/product_list_screen.dart';
 import 'package:smart_wms/features/inventory/presentation/widgets/stock_overview_screen.dart';
+import 'package:smart_wms/features/orders/presentation/widgets/order_form_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/outbound_detail_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/outbound_list_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/pick_verify_screen.dart';
@@ -24,19 +29,26 @@ part 'app_router.g.dart';
 
 @riverpod
 GoRouter appRouter(Ref ref) {
-  final authState = ref.watch(authControllerProvider);
+  final refresh = ValueNotifier<int>(0);
+  ref
+    ..listen(authControllerProvider, (_, next) {
+      refresh.value++;
+    })
+    ..onDispose(refresh.dispose);
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: '/login',
+    refreshListenable: refresh,
     debugLogDiagnostics: true,
     redirect: (context, state) {
+      final authState = ref.read(authControllerProvider);
       final location = state.matchedLocation;
       final isPublicRoute = location == '/login' || location == '/register';
       final isAuthLoading =
           authState is AuthInitial || authState is AuthLoading;
       final isAuthenticated = authState is AuthAuthenticated;
 
-      if (isAuthLoading) return null;
+      if (isAuthLoading) return isPublicRoute ? null : '/login';
 
       if (!isAuthenticated && !isPublicRoute) return '/login';
       if (isAuthenticated && isPublicRoute) return '/';
@@ -44,6 +56,8 @@ GoRouter appRouter(Ref ref) {
     },
     routes: [..._authRoutes, _mainShellRoute, ..._scannerRoutes],
   );
+  ref.onDispose(router.dispose);
+  return router;
 }
 
 // ── Auth Routes ─────────────────────────────────────────────────────
@@ -84,8 +98,30 @@ final _scannerRoutes = [
 
 // ── Main Shell Route (Bottom Navigation) ────────────────────────────
 final _mainShellRoute = ShellRoute(
-  builder: (context, state, child) => _MainShell(child: child),
+  builder: (context, state, child) => MainShell(child: child),
   routes: [
+    GoRoute(
+      path: '/ai-draft',
+      onExit: (context, state) => confirmOrderExit(context),
+      redirect: (_, state) =>
+          state.extra is OrderDraftPreview ? null : '/ai-chat',
+      builder: (context, state) {
+        final draft = state.extra! as OrderDraftPreview;
+        return OrderFormScreen(
+          type: draft.type,
+          initialItems: draft.items,
+          initialNote: draft.note,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/reports',
+      builder: (context, state) => const ReportsScreen(),
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
+    ),
     GoRoute(
       path: '/',
       name: RouteNames.home,
@@ -117,6 +153,12 @@ final _mainShellRoute = ShellRoute(
       builder: (context, state) => const InboundListScreen(),
       routes: [
         GoRoute(
+          path: 'new',
+          onExit: (context, state) => confirmOrderExit(context),
+          builder: (context, state) =>
+              const OrderFormScreen(type: OrderType.inbound),
+        ),
+        GoRoute(
           path: ':orderId',
           name: RouteNames.inboundDetail,
           builder: (context, state) {
@@ -131,6 +173,12 @@ final _mainShellRoute = ShellRoute(
       name: RouteNames.outboundList,
       builder: (context, state) => const OutboundListScreen(),
       routes: [
+        GoRoute(
+          path: 'new',
+          onExit: (context, state) => confirmOrderExit(context),
+          builder: (context, state) =>
+              const OrderFormScreen(type: OrderType.outbound),
+        ),
         GoRoute(
           path: ':orderId',
           name: RouteNames.outboundDetail,

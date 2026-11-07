@@ -1,4 +1,8 @@
-﻿<div align="center">
+## Bàn giao frontend
+
+Xem [trang bàn giao frontend](docs/FRONTEND_HANDOVER.md) để chạy preview, xem trạng thái từng màn và việc cần tích hợp backend. Kết quả kiểm tra và giới hạn hiện tại nằm tại đó; các số liệu test trong phần README cũ bên dưới là lịch sử, không phải kết quả của nhánh bàn giao.
+
+<div align="center">
 
 # 📦 Smart WMS — Inventory Assistant
 ### Hệ Thống Quản Lý Kho Hàng Thông Minh Đa Nền Tảng

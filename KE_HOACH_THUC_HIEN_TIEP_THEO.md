@@ -1,129 +1,85 @@
-# Kế Hoạch Thực Hiện Tiếp Theo - Smart WMS (InventoryAssistant)
+# Kế hoạch thực hiện tiếp theo — Smart WMS
 
-> **Ngày cập nhật:** 10/10/2026  
-> **Dự án:** Smart WMS - Hệ thống Quản lý Tồn kho Thông minh  
-> **Công nghệ:** Flutter, Riverpod (Code Generation), Supabase, GoRouter, fpdart, Freezed, ML Kit, Speech-to-Text, FL Chart, Excel, PDF.
+Cập nhật: 18/10/2026. Kế hoạch ngày 13/10 bên dưới được giữ làm lịch sử triển khai FE; trạng thái bàn giao hiện tại nằm ngay sau đoạn này.
 
----
+## Trạng thái bàn giao FE — 18/10/2026
 
-## 1. Tổng Quan Hiện Trạng Dự Án
+- Source FE hiện hành được đưa từ `D:\InventoryAssistant-main` sang checkout riêng của repo chung trên nhánh `feature/frontend-web`, dựa trên `main` mới nhất tại thời điểm clone. Giữ lịch sử repo, file Android/iOS và các file upstream không thuộc FE.
+- Trang bàn giao chính: [docs/FRONTEND_HANDOVER.md](docs/FRONTEND_HANDOVER.md). Bằng chứng nghiệm thu và contract chi tiết ở các tài liệu được liên kết từ trang đó.
+- Preview đã có UI và fixture cho các luồng được mô tả; chưa có bằng chứng xác minh end-to-end với Supabase thật hoặc thiết bị thật. Không đánh dấu 17 user stories hoàn thành.
+- Công việc ưu tiên cho BE: hoàn thiện adapter CRUD danh mục/vị trí và phiếu; lưu phiếu nhiều dòng nguyên tử với idempotency; xác thực quyền/RLS; hoàn tất giao dịch tồn, reservation và ledger; tải line items phiếu xuất; kiểm thử auth/session và realtime bằng dữ liệu thật. Xem contract để thống nhất API và schema trước khi viết.
+- Công việc còn lại cho FE/QA: duyệt giao diện với người dùng, kiểm thử camera/OCR ảnh/micro trên thiết bị, xác minh xuất/chia sẻ PDF trên nền tảng đích, bổ sung các màn hoặc nghiệp vụ chưa có trong 17 user stories sau khi BE cung cấp contract. Preview không lưu dữ liệu qua reload.
+- Kiểm tra Flutter/Dart mới trên checkout bàn giao bị chặn vì SDK không trả output ngay cả với `--version`; trạng thái được ghi trong trang bàn giao. Con số 103/103 là báo cáo tại [frontend-acceptance.md](docs/frontend-acceptance.md) ngày 13/10/2026, không phải kết quả kiểm tra ngày 18/10.
 
-### 1.1. Ưu điểm hiện tại (Current Strengths)
-- **Kiến trúc ứng dụng chuẩn mực:** Áp dụng Clean Architecture (`presentation` -> `domain` <- `data`) phối hợp Riverpod code gen và `fpdart` (`Either<Failure, T>`).
-- **Bộ dữ liệu & Đơn vị nghiệp vụ cơ bản:** Các mô hình chính (`Profile`, `Product`, `Location`, `InventoryItem`, `WarehouseOrder`, `PickListItem`, `ChatMessage`) đã hoàn chỉnh.
-- **Bộ Test hiện có:** 28 test cases đã chạy PASS 100% trong `test/core` và `test/features`.
-- **Tài liệu dự án chỉn chu:** `PRD_Smart_WMS.md`, `docs/system-architecture.md`, `docs/code-standards.md`, `docs/USER_STORIES.md`, `AGENTS.md` được đồng bộ.
+Các dòng cũ bên dưới nói "không commit/push" và "sau khi người dùng duyệt FE" là giới hạn của đợt trước; người dùng đã cho phép commit/push bản bàn giao trong đợt 18/10.
 
-### 1.2. Khoảng trống cần hoàn thiện (Gap Analysis)
-1. **Chất lượng mã nguồn (Code Cleanliness & Analysis):**
-   - Còn **17 thông báo lint (info level)** khi chạy `flutter analyze` (thứ tự constructor trong model Freezed, `eol_at_end_of_file`, sắp xếp dependencies `pubspec.yaml`).
-2. **AI Assistant & Nhập lệnh bằng Giọng nói (US-13, US-14):**
-   - Thư viện `speech_to_text` đã khai báo trong `pubspec.yaml`, cần hoàn thiện tích hợp micro/voice input trực tiếp vào `AiChatScreen`.
-   - Cần hoàn thiện luồng **Human-in-the-loop Preview Draft Sheet** (xem trước bản nháp phiếu nhập/xuất do AI tạo trước khi xác nhận lưu DB).
-3. **Dashboard, Quản lý vị trí & Báo cáo Nhập-Xuất-Tồn (US-15, US-16, US-17):**
-   - Chưa tích hợp đầy đủ màn hình Báo cáo kho kết xuất tập tin **Excel** (`excel`) và **PDF** (`pdf`) cũng như biểu đồ thống kê tồn kho (`fl_chart`).
-   - Giao diện Quản lý vị trí lưu trữ (Zone/Rack/Bin) cần bổ sung tính năng quản lý chi tiết.
-4. **Độ bao phủ Kiểm thử (Test Coverage):**
-   - Cần bổ sung test cho Controllers (`ProductController`, `OutboundController`, `AiChatController`), Repositories và Widget Tests.
+## Mục tiêu và giới hạn đợt này
 
----
+Giữ mục tiêu nghiệp vụ của 17 user stories trong `docs/USER_STORIES.md`: tài khoản/vai trò, sản phẩm, vị trí, tồn kho/realtime, nhập/xuất, barcode/QR, OCR, AI/voice, dashboard và báo cáo. Không đánh dấu user story hoàn thành chỉ vì có giao diện.
 
-## 2. Mục Tiêu & Tiêu Chí Hoàn Thành (Definition of Done)
+Giữ Flutter/Dart, Riverpod, GoRouter, Supabase và Clean Architecture feature-first. Không thay schema/RPC/Edge Functions/config Supabase, không đổi dependency version, không sửa tay generated, không commit/push/deploy. Không có Git metadata; không tự git init.
 
-- [ ] **100% Clean Code:** `flutter analyze` báo **0 issues**.
-- [ ] **100% Test Passing:** Toàn bộ Unit & Widget Tests chạy xanh (`flutter test`).
-- [ ] **Hoàn thiện 17/17 User Stories:** Bao gồm Voice AI Assistant, Preview Draft Sheet, Realtime Dashboard, Báo cáo Excel/PDF.
-- [ ] **Đóng gói sản phẩm:** Build thành công APK Android & Deploy Web Admin.
+Baseline do người dùng cung cấp: analyze 0 issue, 28 test pass. Các thông tin cũ về 17 lint đã được thay thế bằng baseline này.
 
-
-
----
-
-## 3. Kế Hoạch Chi Tiết Theo Giai Đoạn (Roadmap & Action Plan)
+## Thứ tự triển khai mới
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│ Phase 1: Chuẩn hóa Mã Nguồn & Fix Lint Warnings                         │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-┌────────────────────────────────────▼────────────────────────────────────┐
-│ Phase 2: Hoàn Thiện Voice AI Assistant & Preview Draft Sheet            │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-┌────────────────────────────────────▼────────────────────────────────────┐
-│ Phase 3: Phát Triển Module Báo Cáo (Excel/PDF) & Quản Lý Vị Trí Warehouse│
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-┌────────────────────────────────────▼────────────────────────────────────┐
-│ Phase 4: Mở Rộng Bộ Test Suite (Controller, Repository & Widget Tests)  │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-┌────────────────────────────────────▼────────────────────────────────────┐
-│ Phase 5: Tối Ưu Hiệu Năng & Đóng Gói Release / Báo Cáo Đồ Án            │
-└─────────────────────────────────────────────────────────────────────────┘
+Nền UI / tài khoản
+  → Sản phẩm / tồn kho / vị trí
+  → Phiếu nhập / xuất
+  → Dashboard / báo cáo
+  → Scan / AI / voice
+  → Nghiệm thu frontend
+  → Phối hợp tích hợp backend (sau khi người dùng duyệt FE)
 ```
 
-### 🔹 Giai đoạn 1: Chuẩn hóa Mã Nguồn & Fix Lint Warnings (Thời gian: 0.5 - 1 ngày)
-* **Mục tiêu:** Đảm bảo toàn bộ codebase tuân thủ `code-standards.md` và `very_good_analysis`.
-* **Công việc cụ thể:**
-  1. Cấu hình & sắp xếp lại dependencies trong `pubspec.yaml` theo thứ tự Alphabet.
-  2. Định vị và sửa vị trí Unnamed Constructor trong các file models (`profile_model.dart`, `warehouse_order_model.dart`, `inventory_item_model.dart`, `location_model.dart`, `product_model.dart`, `pick_list_item_model.dart`).
-  3. Xóa các dòng trống dư thừa ở cuối file (`eol_at_end_of_file`).
-  4. Chạy `dart run build_runner build --delete-conflicting-outputs`.
-  5. Kiểm tra lại bằng lệnh `flutter analyze` (yêu cầu ra kết quả 0 issue).
+## Kết quả frontend đã triển khai
 
----
+| Phần | Frontend và hành vi | Còn chờ / không được suy diễn |
+|---|---|---|
+| Nền UI | Theme xanh kho hiện có, form nhất quán; sidebar desktop, drawer + bottom nav mobile; router giữ instance và refresh theo auth; login/register validation; hồ sơ, theme trong phiên, đăng xuất | Auth Supabase/session/email confirmation chưa xác minh; chưa có cập nhật hồ sơ/lưu setting |
+| Sản phẩm/tồn | Tìm tên/SKU/barcode, lọc đơn vị, mở chi tiết, tồn theo vị trí; Admin thêm/sửa/xóa có validation và xác nhận | Production CRUD trả trạng thái chờ backend; không bịa API |
+| Vị trí | Tìm cấu trúc zone/aisle/rack/bin/barcode, xem chi tiết, Admin form thêm/sửa và xác nhận xóa | Chưa có category/warehouse entity; không tạo schema tùy ý |
+| Phiếu | Danh sách, tìm/lọc trạng thái, ownership scope FE, chi tiết/dòng hàng; form nhiều dòng, note, số nguyên dương; cộng gộp dòng xuất theo product/location và kiểm tra tồn nếu có snapshot; khóa gửi; Admin/Manager duyệt/từ chối Nháp | Lưu atomic/idempotent và review compare-and-set đang chờ adapter BE; phiếu xuất thật chưa tải line items; duyệt không đồng nghĩa cập nhật tồn |
+| Dashboard | Theo vai trò; SKU có tồn, cảnh báo theo minSafetyStock; tổng theo từng đơn vị; biểu đồ lọc đơn vị + danh sách số liệu, drilldown/quick actions | Realtime backend thật chưa kiểm chứng; không có biểu đồ biến động nếu thiếu ledger |
+| Báo cáo | Tồn hiện tại; lịch sử header phiếu lọc theo ngày tạo; xuất Excel/PDF từ dữ liệu nhận được, lỗi xuất có thông báo | Không báo tồn đầu/cuối kỳ hoặc lượng nhập/xuất thực tế; PDF cần font Unicode lần đầu; workflow chia sẻ phải kiểm tra theo nền tảng |
+| Scan | Nhập barcode thủ công, kết quả và mở chi tiết; mô phỏng chỉ trong preview; UI MobileScanner thực tế với lỗi quyền; đối soát mã/đếm trong phiên | Camera thật chưa kiểm chứng; batch receiving/lưu đối soát/chốt tồn cần BE; OCR chỉ parser văn bản dán có nhãn mô phỏng |
+| AI | Loading/lỗi/thử lại, khóa gửi lặp, voice điền văn bản; bản nháp single-line giải quyết product/location duy nhất, mở form để sửa/hủy/xác nhận | Edge Function và micro thật chưa xác minh; multi-line NLU/lot/expiry cần contract mở rộng |
+| Preview | Entry point riêng `main_preview.dart`, fixture trong bộ nhớ và nhãn XEM TRƯỚC; Admin/Manager/Staff dùng cùng FE | Không thay ngầm repository thật; dữ liệu mất khi restart; AI fixture không phải LLM |
 
-### 🔹 Giai đoạn 2: Nâng Cấp AI Assistant & Tích Hợp Voice Input (Thời gian: 2 ngày)
-* **Mục tiêu:** Đáp ứng đầy đủ **US-13** (Tạo phiếu bằng AI) & **US-14** (Nhập lệnh bằng giọng nói).
-* **Công việc cụ thể:**
-  1. **Voice Input Service:** Tích hợp `speech_to_text` vào `AiChatScreen`, hỗ trợ nút bấm/giữ nói để chuyển giọng nói tiếng Việt thành văn bản.
-  2. **Intent Parsing & Stock Query:** Hoàn thiện `ParseIntentUseCase` và `QueryStockUseCase` xử lý các intent: `query_stock`, `create_inbound_draft`, `create_outbound_draft`.
-  3. **Human-in-the-loop Preview Draft Sheet:**
-     - Thiết kế Bottom Sheet/Modal Preview hiển thị thông tin phiếu nháp do AI trích xuất (Tên hàng, SKU, Số lượng, Vị trí).
-     - Cho phép thủ kho kiểm tra và chỉnh sửa trước khi xác nhận lưu DB.
+Sửa thêm lỗi controller cũ: dependency `late final` gán trong build gây lỗi khi Riverpod invalidate để retry; cho phép gán lại dependency ở controller sản phẩm/vị trí/nhập/xuất.
 
----
+## Kiểm chứng đợt frontend trước
 
-### 🔹 Giai đoạn 3: Module Báo Cáo (Excel/PDF) & Quản Lý Vị Trí Kho (Thời gian: 2 - 3 ngày)
-* **Mục tiêu:** Đáp ứng **US-16** (Quản lý vị trí kho) & **US-17** (Xem & xuất báo cáo nhập/xuất/tồn).
-* **Công việc cụ thể:**
-  1. **Quản lý Vị trí Lưu trữ (Location Management - US-16):**
-     - Nâng cấp `location_list_screen.dart`: Cho phép thêm/sửa/xóa vị trí kho (Zone, Rack, Bin, Capacity).
-     - Gắn liên kết trực tiếp giữa Sản phẩm và Vị trí trên sơ đồ kho.
-  2. **Màn hình Báo cáo Nhập - Xuất - Tồn (Reports - US-17):**
-     - Xây dựng màn hình `reports_screen.dart` sử dụng `fl_chart` hiển thị biểu đồ biến động tồn kho.
-     - **Xuất Báo Cáo Excel:** Tích hợp package `excel` xuất dữ liệu danh sách tồn kho, lịch sử nhập/xuất ra file `.xlsx`.
-     - **Xuất Báo Cáo PDF:** Tích hợp package `pdf` & `printing` tạo phiếu nhập/xuất và báo cáo tổng hợp dạng PDF để in.
+- [x] Đọc AGENTS.md, kiến trúc, code standards và hai skill UI; áp dụng smart-wms-feature và ECC dart-flutter-patterns.
+- [x] Chạy build_runner sau sửa controller/router annotated; không sửa tay generated.
+- [x] Test cũ 28/28 đã pass trong các đợt trung gian.
+- [x] Bổ sung test scope vai trò, validation, xuất vượt tồn, idempotency, duyệt không đổi tồn, AI preview/lỗi/loading và nội dung Excel/date filter.
+- [x] Bổ sung regression test lỗi/thử lại controller.
+- [x] Kết quả cuối: analyze --no-pub 0 issue; test --no-pub 71/71 pass; build web --no-pub thành công. Wasm dry-run cảnh báo từ dependency image; không đổi phiên bản dependency.
+- [ ] Người dùng nghiệm thu FE; chưa duyệt tích hợp BE.
+- [ ] 17/17 user stories đạt tiêu chí cả FE + BE + thiết bị: chưa hoàn thành.
+- [ ] APK/iOS và deploy: ngoài đợt hiện tại.
 
----
+Bằng chứng render và giới hạn: `docs/frontend-acceptance.md`.
+Contract bàn giao: `docs/frontend-backend-contracts.md`.
 
-### 🔹 Giai đoạn 4: Mở Rộng Bộ Test Suite (Thời gian: 1.5 - 2 ngày)
-* **Mục tiêu:** Đảm bảo độ ổn định cao cho ứng dụng trước khi release.
-* **Công việc cụ thể:**
-  1. **Unit Tests cho Controllers:** Viết test cho `ProductController`, `InboundController`, `OutboundController`, `AiChatController` (kiểm tra các trạng thái Loading, Success, Error).
-  2. **Unit Tests cho Repositories:** Test lớp Repository Impl kết hợp với Mock Datasources.
-  3. **Widget Tests:** Viết widget test cho các luồng chính: `SignInScreen`, `ProductListScreen`, `InboundListScreen`, `PickVerifyScreen`.
+## Đợt chốt thiết kế ba màn (13/10/2026)
 
----
+- [x] Shell/sidebar/topbar, dashboard, danh sách nhập và form nhiều dòng được thiết kế lại thống nhất.
+- [x] Preview/production giữ dùng chung UI/router/state; bổ sung fixture dài và trạng thái chỉ trong preview.
+- [x] Bổ sung regression cho responsive 390/820/1440, text scale 130%, dark, lọc, retry, xóa dòng, lưu lỗi/khóa gửi và guard rời form.
+- [x] Kiểm tra mới: analyze 0 issue; 90/90 test pass; preview web build thành công. Kết quả production build và ảnh chốt ghi tại docs/frontend-acceptance.md.
+- [x] Render Chrome thật và rà soát screenshot desktop/mobile/trung gian, dropdown và validation; ghi rõ giới hạn thiết bị trong tài liệu.
+- [ ] Người dùng duyệt thiết kế ba màn đại diện.
+- [ ] Sau duyệt mới mở đợt áp dụng cho sản phẩm, vị trí, xuất, báo cáo, scan, AI và tài khoản.
+- [ ] Backend tích hợp/17 user stories hoàn chỉnh: chưa hoàn thành.
 
-### 🔹 Giai đoạn 5: Tối Ưu, Đóng Gói & Hoàn Thiện Tài Liệu (Thời gian: 1 ngày)
-* **Mục tiêu:** Sẵn sàng cho Demo, Đánh giá Hội đồng & Nghiệm thu.
-* **Công việc cụ thể:**
-  1. Thử nghiệm toàn bộ luồng nghiệp vụ trên thiết bị thật (Android APK / iOS / Web).
-  2. Chạy lại toàn bộ kiểm tra chất lượng:
-     ```bash
-     flutter analyze
-     flutter test
-     ```
-  3. Cập nhật `README.md` với đầy đủ hướng dẫn cài đặt, cấu hình `.env` và ảnh chụp màn hình demo.
-  4. Đóng gói ứng dụng (Android APK release build) và chuẩn bị Slide thuyết trình đồ án (Thesis Presentation).
+## Bước tiếp theo sau nghiệm thu FE
 
----
-
-## 4. Tóm Tắt Nhiệm Vụ Cần Làm Ngay (Next Immediate Tasks)
-
-1. **Task 1:** Fix 17 lint warnings trong `lib/features/**/models/*.dart` & `pubspec.yaml`.
-2. **Task 2:** Kết nối `speech_to_text` vào `AiChatScreen` và hoàn thiện giao diện Draft Preview Sheet cho AI.
-3. **Task 3:** Tạo `ReportsScreen` với tính năng Xuất Excel (`excel`) & PDF (`pdf`).
-4. **Task 4:** Thêm Unit Tests cho Controllers & Repositories.
+1. Người dùng kiểm tra Admin và nhân viên trong preview; chốt giao diện, quyền, validation và trạng thái nghiệp vụ.
+2. Thống nhất contract danh mục/kho/hồ sơ nếu cần mở rộng model.
+3. Người phụ trách BE cung cấp adapter CRUD, lưu/review phiếu nguyên tử, line items, ledger và authorization.
+4. Kiểm thử contract thực trên staging; xác minh realtime, transaction tồn, session, email confirmation và idempotent retry.
+5. Kiểm chứng barcode camera, OCR ảnh thực tế, voice và xuất/chia sẻ file trên thiết bị đích.
+6. Chỉ cập nhật trạng thái user story khi toàn bộ acceptance criteria có bằng chứng; đóng gói/deploy khi được yêu cầu riêng.

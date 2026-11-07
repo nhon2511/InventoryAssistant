@@ -52,14 +52,14 @@ class ProductModel {
   }
 
   Product toEntity() => Product(
-        id: id,
-        sku: sku,
-        barcode: barcode,
-        name: name,
-        description: description,
-        unit: unit,
-        minSafetyStock: minSafetyStock,
-        createdAt: createdAt != null ? DateTime.tryParse(createdAt!) : null,
-        updatedAt: updatedAt != null ? DateTime.tryParse(updatedAt!) : null,
-      );
+    id: id,
+    sku: sku,
+    barcode: barcode,
+    name: name,
+    description: description,
+    unit: unit,
+    minSafetyStock: minSafetyStock,
+    createdAt: createdAt != null ? DateTime.tryParse(createdAt!) : null,
+    updatedAt: updatedAt != null ? DateTime.tryParse(updatedAt!) : null,
+  );
 }

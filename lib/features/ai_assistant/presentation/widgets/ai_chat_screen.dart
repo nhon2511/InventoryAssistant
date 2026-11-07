@@ -8,7 +8,16 @@ import 'package:smart_wms/features/ai_assistant/presentation/controllers/ai_chat
 
 class AiChatScreen extends HookConsumerWidget {
   const AiChatScreen({super.key});
+  @override
+  ConsumerState<AiChatScreen> createState() => _AiChatScreenState();
+}
 
+class _AiChatScreenState extends ConsumerState<AiChatScreen> {
+  final text = TextEditingController();
+  final scroll = ScrollController();
+  final voice = VoiceInputService();
+  String? voiceError;
+  bool voiceBusy = false;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chatState = ref.watch(aiChatControllerProvider);
@@ -67,6 +76,16 @@ class AiChatScreen extends HookConsumerWidget {
       }
     }
 
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(aiChatControllerProvider);
+    ref.listen(aiChatControllerProvider, (_, next) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && scroll.hasClients) {
+          scroll.jumpTo(scroll.position.maxScrollExtent);
+        }
+      });
+    });
     return Scaffold(
       appBar: AppBar(
         title: const Text('Trợ lý AI Kho Hàng'),
@@ -137,20 +156,64 @@ class AiChatScreen extends HookConsumerWidget {
                   onPressed: chatState.isProcessing ? null : () => _sendMessage(ref, textController),
                   icon: const Icon(Icons.send),
                 ),
-              ],
-            ),
+              if (voice.listening)
+                const Text(
+                  'Đang nghe tiếng Việt · Bấm micro để dừng. Văn bản chưa được gửi.',
+                ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    IconButton(
+                      tooltip: voice.supported
+                          ? voice.listening
+                                ? 'Dừng micro'
+                                : 'Nhập giọng nói'
+                          : 'Giọng nói chưa hỗ trợ trên nền tảng này',
+                      onPressed:
+                          voice.supported && !voiceBusy && !state.isProcessing
+                          ? toggleVoice
+                          : null,
+                      icon: Icon(
+                        voice.listening
+                            ? Icons.stop_circle_outlined
+                            : Icons.mic_none,
+                      ),
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: text,
+                        minLines: 1,
+                        maxLines: 4,
+                        decoration: const InputDecoration(
+                          labelText: 'Yêu cầu về kho',
+                        ),
+                        onSubmitted: (_) => send(),
+                      ),
+                    ),
+                    IconButton.filled(
+                      tooltip: 'Gửi yêu cầu',
+                      onPressed: state.isProcessing ? null : send,
+                      icon: const Icon(Icons.send),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  void _sendMessage(WidgetRef ref, TextEditingController controller) {
-    final text = controller.text.trim();
-    if (text.isNotEmpty) {
-      ref.read(aiChatControllerProvider.notifier).sendMessage(text);
-      controller.clear();
+  void send() {
+    if (ref.read(aiChatControllerProvider).isProcessing ||
+        text.text.trim().isEmpty) {
+      return;
     }
+    unawaited(voice.stop());
+    ref.read(aiChatControllerProvider.notifier).sendMessage(text.text);
+    text.clear();
   }
 
   void _showDraftPreviewSheet(BuildContext context, WidgetRef ref, OrderDraft draft) {

@@ -48,13 +48,13 @@ class LocationModel {
   }
 
   Location toEntity() => Location(
-        id: id,
-        zoneCode: zoneCode,
-        aisleCode: aisleCode,
-        rackCode: rackCode,
-        binCode: binCode,
-        locationBarcode: locationBarcode,
-        maxCapacityKg: maxCapacityKg,
-        createdAt: createdAt != null ? DateTime.tryParse(createdAt!) : null,
-      );
+    id: id,
+    zoneCode: zoneCode,
+    aisleCode: aisleCode,
+    rackCode: rackCode,
+    binCode: binCode,
+    locationBarcode: locationBarcode,
+    maxCapacityKg: maxCapacityKg,
+    createdAt: createdAt != null ? DateTime.tryParse(createdAt!) : null,
+  );
 }

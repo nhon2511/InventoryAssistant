@@ -1,48 +1,143 @@
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:smart_wms/core/widgets/error_widget.dart';
-import 'package:smart_wms/core/widgets/loading_widget.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:smart_wms/core/widgets/async_panel.dart';
+import 'package:smart_wms/core/widgets/workspace_layout.dart';
+import 'package:smart_wms/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:smart_wms/features/auth/presentation/states/auth_state.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/product_controller.dart';
+import 'package:smart_wms/features/inventory/presentation/widgets/inventory_edit_dialog.dart';
 
-/// Screen displaying the list of all products.
-class ProductListScreen extends ConsumerWidget {
+class ProductListScreen extends ConsumerStatefulWidget {
   const ProductListScreen({super.key});
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final productsAsync = ref.watch(productControllerProvider);
+  ConsumerState<ProductListScreen> createState() => _ProductListScreenState();
+}
 
+class _ProductListScreenState extends ConsumerState<ProductListScreen> {
+  String query = '';
+  String? unit;
+  @override
+  Widget build(BuildContext context) {
+    final auth = ref.watch(authControllerProvider);
+    final admin = auth is AuthAuthenticated && auth.profile.role.isAdmin;
     return Scaffold(
-      appBar: AppBar(title: const Text('Sản phẩm')),
-      body: productsAsync.when(
-        loading: () => const AppLoadingWidget(message: 'Đang tải sản phẩm...'),
-        error: (error, _) => AppErrorWidget(
-          message: error.toString(),
-          onRetry: () => ref.invalidate(productControllerProvider),
-        ),
-        data: (products) => ListView.builder(
-          padding: const EdgeInsets.all(8),
-          itemCount: products.length,
-          itemBuilder: (context, index) {
-            final product = products[index];
-            return Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  child: Text(product.name[0].toUpperCase()),
+      body: AsyncPanel(
+        value: ref.watch(productControllerProvider),
+        onRetry: () => ref.invalidate(productControllerProvider),
+        builder: (products) {
+          final units = products.map((p) => p.unit).toSet().toList()..sort();
+          final filtered = products
+              .where(
+                (p) =>
+                    (unit == null || unit == p.unit) &&
+                    '${p.name} ${p.sku} ${p.barcode}'.toLowerCase().contains(
+                      query.toLowerCase(),
+                    ),
+              )
+              .toList();
+          return WorkspaceContent(
+            child: Column(
+              children: [
+                Padding(
+                  padding: workspacePadding(context).copyWith(bottom: 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      WorkspaceHeader(
+                        title: 'Sản phẩm',
+                        description: 'Tra cứu SKU, mã vạch và đơn vị hàng hóa.',
+                        actions: [
+                          if (admin)
+                            FilledButton.icon(
+                              onPressed: () => showDialog<void>(
+                                context: context,
+                                builder: (_) => const InventoryEditDialog(),
+                              ),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Thêm'),
+                            ),
+                        ],
+                      ),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Tìm tên, SKU hoặc mã vạch',
+                            prefixIcon: Icon(Icons.search),
+                          ),
+                          onChanged: (v) => setState(() => query = v),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                title: Text(product.name),
-                subtitle: Text('SKU: ${product.sku} • ${product.unit}'),
-                trailing: Text(product.barcode),
-              ),
-            );
-          },
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Navigate to add product screen
+                SizedBox(
+                  height: 52,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: workspacePadding(context).left,
+                    ),
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Tất cả đơn vị'),
+                        selected: unit == null,
+                        onSelected: (_) => setState(() => unit = null),
+                      ),
+                      for (final value in units)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: ChoiceChip(
+                            label: Text(value),
+                            selected: unit == value,
+                            onSelected: (_) => setState(() => unit = value),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: workspacePadding(context)
+                      .copyWith(top: 0, bottom: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('${filtered.length} sản phẩm'),
+                  ),
+                ),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'Không có sản phẩm phù hợp. Hãy đổi từ khóa hoặc bộ lọc.',
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: workspacePadding(context).left,
+                          ),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final product = filtered[index];
+                            return ListTile(
+                              leading: const Icon(Icons.inventory_2_outlined),
+                              title: Text(product.name),
+                              subtitle: Text(
+                                '${product.sku} · ${product.unit}\nMã vạch: ${product.barcode}',
+                              ),
+                              isThreeLine: true,
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () =>
+                                  context.go('/products/${product.id}'),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          );
         },
-        child: const Icon(Icons.add),
       ),
     );
   }

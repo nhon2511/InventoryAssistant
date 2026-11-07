@@ -33,7 +33,7 @@ final class InboundControllerProvider
   InboundController create() => InboundController();
 }
 
-String _$inboundControllerHash() => r'b644e7e9815a2891178b69a1b7289164a978bdc8';
+String _$inboundControllerHash() => r'e2a9f6aacaf71453dfe2dbe85933163a4f2bc622';
 
 abstract class _$InboundController
     extends $AsyncNotifier<List<WarehouseOrder>> {

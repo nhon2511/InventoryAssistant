@@ -34,7 +34,7 @@ final class LocationControllerProvider
 }
 
 String _$locationControllerHash() =>
-    r'913873977596e2e77c659fd02aba37506e8b9889';
+    r'4e2d075f7ef57b3cc5ebf734659db917ef208841';
 
 abstract class _$LocationController extends $AsyncNotifier<List<Location>> {
   FutureOr<List<Location>> build();
