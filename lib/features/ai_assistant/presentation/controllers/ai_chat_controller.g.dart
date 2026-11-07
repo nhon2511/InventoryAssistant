@@ -8,12 +8,15 @@ part of 'ai_chat_controller.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Controller managing the AI assistant chat conversation.
 
 @ProviderFor(AiChatController)
 final aiChatControllerProvider = AiChatControllerProvider._();
 
+/// Controller managing the AI assistant chat conversation.
 final class AiChatControllerProvider
     extends $NotifierProvider<AiChatController, AiChatState> {
+  /// Controller managing the AI assistant chat conversation.
   AiChatControllerProvider._()
     : super(
         from: null,

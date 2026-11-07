@@ -11,6 +11,7 @@ import 'package:smart_wms/features/ai_assistant/domain/usecases/query_stock_usec
 
 part 'ai_chat_controller.g.dart';
 
+/// Controller managing the AI assistant chat conversation.
 @riverpod
 class AiChatController extends _$AiChatController {
   late final ParseIntentUseCase _parseIntent;
@@ -26,18 +27,18 @@ class AiChatController extends _$AiChatController {
     return const AiChatState();
   }
 
+  /// Processes a user message: parse intent → execute action → respond.
   Future<void> sendMessage(String userText) async {
-    if (userText.trim().isEmpty || state.isProcessing) return;
-    final text = userText.trim();
-    state = AiChatState(
-      messages: [
-        ...state.messages,
-        ChatMessage(
-          role: ChatRole.user,
-          content: text,
-          timestamp: DateTime.now(),
-        ),
-      ],
+    if (userText.trim().isEmpty) return;
+
+    // Add user message to chat history.
+    final userMessage = ChatMessage(
+      role: ChatRole.user,
+      content: userText,
+      timestamp: DateTime.now(),
+    );
+    state = state.copyWith(
+      messages: [...state.messages, userMessage],
       isProcessing: true,
     );
 
@@ -152,16 +153,12 @@ class AiChatController extends _$AiChatController {
 
   /// Clears the chat history.
   void clearChat() {
-    if (!state.isProcessing) state = const AiChatState();
+    state = const AiChatState();
   }
 
-  void dismissDraft() => state = AiChatState(
-    messages: state.messages,
-    error: state.error,
-    lastFailedText: state.lastFailedText,
-  );
 }
 
+/// State for the AI chat conversation.
 class AiChatState {
   const AiChatState({
     this.messages = const [],

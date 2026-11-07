@@ -26,6 +26,9 @@ class _DelayedAi implements AiAssistantRepository {
   @override
   FutureEither<String> queryStock(Map<String, String> entities) async =>
       const Right('fixture');
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 void main() {
@@ -131,8 +134,6 @@ void main() {
       await controller.sendMessage('phiếu nhập nháp');
       expect(container.read(aiChatControllerProvider).draft, isNotNull);
       expect(repository.orders.length, 3);
-      controller.dismissDraft();
-      expect(container.read(aiChatControllerProvider).draft, isNull);
       expect(repository.orders.length, 3);
     },
   );
