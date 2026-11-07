@@ -1,6 +1,8 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:smart_wms/core/errors/failures.dart';
 import 'package:smart_wms/core/preview/preview_repository.dart';
 import 'package:smart_wms/core/utils/typedefs.dart';
+import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/parsed_intent.dart';
 import 'package:smart_wms/features/ai_assistant/domain/repositories/ai_assistant_repository.dart';
 
@@ -25,6 +27,11 @@ class PreviewAiRepository implements AiAssistantRepository {
                 'product_id': 'p-1',
                 'location_id': 'l-1',
                 'quantity': '5',
+                'order_type': normalized.contains('xuất')
+                    ? 'outbound'
+                    : 'inbound',
+                'product_name': 'Găng tay bảo hộ',
+                'location': 'A-01-01-01',
                 'note':
                     'Mô phỏng bản nháp AI; không phải phân tích ngôn ngữ thực.',
               }
@@ -38,4 +45,32 @@ class PreviewAiRepository implements AiAssistantRepository {
       const Right(
         'Mô phỏng: Găng tay bảo hộ có 70 đôi khả dụng tại A-01-01-01 (80 thực có − 10 giữ chỗ).',
       );
+
+  @override
+  FutureEither<OrderDraft> createDraftOrder(
+    Map<String, String> entities,
+  ) async {
+    final quantity = int.tryParse(entities['quantity'] ?? '');
+    if (quantity == null || quantity <= 0) {
+      return const Left(
+        AiFailure(message: 'Số lượng bản nháp phải lớn hơn 0.'),
+      );
+    }
+
+    return Right(
+      OrderDraft(
+        orderType: entities['order_type'] ?? 'inbound',
+        note: entities['note'],
+        items: [
+          OrderDraftItem(
+            productName: entities['product_name'] ?? 'Găng tay bảo hộ',
+            quantity: quantity,
+            sku: entities['sku'],
+            locationLabel: entities['location'],
+            lotNumber: entities['lot_number'],
+          ),
+        ],
+      ),
+    );
+  }
 }

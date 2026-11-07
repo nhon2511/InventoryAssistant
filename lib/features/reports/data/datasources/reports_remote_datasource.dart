@@ -4,6 +4,9 @@ import 'package:smart_wms/features/reports/data/models/report_item_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Remote data source for report queries via Supabase.
+// This interface is intentional: it keeps Supabase details behind a data
+// boundary and makes the datasource replaceable in tests.
+// ignore: one_member_abstracts
 abstract class ReportsRemoteDataSource {
   /// Fetches all products joined with their aggregated inventory data.
   Future<List<ReportItemModel>> getReportItems();
@@ -50,8 +53,9 @@ class ReportsRemoteDataSourceImpl implements ReportsRemoteDataSource {
 
         final existing = stockMap[productId];
         if (existing != null) {
-          existing.totalOnHand += onHand;
-          existing.totalReserved += reserved;
+          existing
+            ..totalOnHand += onHand
+            ..totalReserved += reserved;
           if (!existing.locations.contains(label)) {
             existing.locations.add(label);
           }
@@ -96,4 +100,3 @@ class _AggregatedStock {
   int totalReserved;
   List<String> locations;
 }
-

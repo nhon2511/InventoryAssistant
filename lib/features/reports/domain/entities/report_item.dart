@@ -21,7 +21,7 @@ class ReportItem {
   final String sku;
   final String productName;
 
-  /// Product category (derived from [Product.unit]).
+  /// Product category, derived from the product unit.
   final String category;
 
   /// Total quantity on hand across all locations.

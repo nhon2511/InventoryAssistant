@@ -13,7 +13,7 @@ class InventorySummary {
   /// Total number of distinct products.
   final int totalProducts;
 
-  /// Sum of [quantityOnHand] across every product and location.
+  /// Sum of quantityOnHand across every product and location.
   final int totalStockQuantity;
 
   /// Products whose on-hand quantity is at or below safety stock.

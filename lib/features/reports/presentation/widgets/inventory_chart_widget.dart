@@ -37,9 +37,8 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
               children: [
                 Text(
                   'Biến động tồn kho',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 SegmentedButton<_ChartPeriod>(
                   segments: const [
@@ -69,9 +68,7 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
             SizedBox(
               height: 220,
               child: displayItems.isEmpty
-                  ? const Center(
-                      child: Text('Không có dữ liệu để hiển thị'),
-                    )
+                  ? const Center(child: Text('Không có dữ liệu để hiển thị'))
                   : BarChart(_buildChartData(displayItems)),
             ),
           ],
@@ -140,7 +137,6 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
         ),
       ),
       titlesData: FlTitlesData(
-        show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -151,8 +147,9 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
                 return const SizedBox.shrink();
               }
               final name = items[index].productName;
-              final display =
-                  name.length > 6 ? '${name.substring(0, 6)}...' : name;
+              final display = name.length > 6
+                  ? '${name.substring(0, 6)}...'
+                  : name;
               return SideTitleWidget(
                 meta: meta,
                 space: 4,
@@ -182,7 +179,6 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
       ),
       borderData: FlBorderData(show: false),
       gridData: FlGridData(
-        show: true,
         drawVerticalLine: false,
         horizontalInterval: max(1, maxY / 5).toDouble(),
       ),
@@ -222,4 +218,3 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
     );
   }
 }
-

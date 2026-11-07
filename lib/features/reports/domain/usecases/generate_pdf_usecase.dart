@@ -42,10 +42,8 @@ class GeneratePdfUseCase {
 
       final bytes = await pdf.save();
       return Right(bytes);
-    } catch (e) {
-      return Left(
-        CacheFailure(message: 'Lỗi khi tạo PDF: ${e.toString()}'),
-      );
+    } on Exception catch (e) {
+      return Left(CacheFailure(message: 'Lỗi khi tạo PDF: $e'));
     }
   }
 
@@ -139,10 +137,7 @@ class GeneratePdfUseCase {
         pw.SizedBox(height: 4),
         pw.Text(
           label,
-          style: const pw.TextStyle(
-            fontSize: 9,
-            color: PdfColors.grey700,
-          ),
+          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
         ),
       ],
     );
@@ -165,9 +160,7 @@ class GeneratePdfUseCase {
         fontSize: 9,
         color: PdfColors.white,
       ),
-      headerDecoration: pw.BoxDecoration(
-        color: PdfColor.fromHex('#1B6B5A'),
-      ),
+      headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#1B6B5A')),
       cellStyle: const pw.TextStyle(fontSize: 8),
       cellAlignment: pw.Alignment.centerLeft,
       columnWidths: {
@@ -209,26 +202,18 @@ class GeneratePdfUseCase {
       children: [
         pw.Text(
           title,
-          style: pw.TextStyle(
-            fontSize: 11,
-            fontWeight: pw.FontWeight.bold,
-          ),
+          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
         ),
         pw.SizedBox(height: 4),
         pw.Text(
           '(Ky va ghi ro ho ten)',
-          style: const pw.TextStyle(
-            fontSize: 9,
-            color: PdfColors.grey600,
-          ),
+          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
         ),
         pw.SizedBox(height: 60),
         pw.Container(
           width: 150,
           decoration: const pw.BoxDecoration(
-            border: pw.Border(
-              bottom: pw.BorderSide(color: PdfColors.grey400),
-            ),
+            border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey400)),
           ),
         ),
       ],
@@ -241,12 +226,8 @@ class GeneratePdfUseCase {
       margin: const pw.EdgeInsets.only(top: 8),
       child: pw.Text(
         'Trang ${context.pageNumber} / ${context.pagesCount}',
-        style: const pw.TextStyle(
-          fontSize: 8,
-          color: PdfColors.grey600,
-        ),
+        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
       ),
     );
   }
 }
-

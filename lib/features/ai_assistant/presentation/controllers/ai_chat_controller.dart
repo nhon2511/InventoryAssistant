@@ -1,9 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:smart_wms/core/di/ai_assistant_providers.dart';
-import 'package:smart_wms/core/di/inventory_providers.dart';
+import 'package:smart_wms/core/errors/failures.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/chat_message.dart';
-import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft_preview.dart';
-import 'package:smart_wms/features/ai_assistant/domain/usecases/resolve_order_draft_usecase.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft.dart';
 import 'package:smart_wms/features/ai_assistant/domain/usecases/create_draft_order_usecase.dart';
 import 'package:smart_wms/features/ai_assistant/domain/usecases/parse_intent_usecase.dart';
@@ -29,7 +27,7 @@ class AiChatController extends _$AiChatController {
 
   /// Processes a user message: parse intent → execute action → respond.
   Future<void> sendMessage(String userText) async {
-    if (userText.trim().isEmpty) return;
+    if (userText.trim().isEmpty || state.isProcessing) return;
 
     // Add user message to chat history.
     final userMessage = ChatMessage(
@@ -40,6 +38,8 @@ class AiChatController extends _$AiChatController {
     state = state.copyWith(
       messages: [...state.messages, userMessage],
       isProcessing: true,
+      error: null,
+      lastFailedText: null,
     );
 
     // Step 1: Parse intent via LLM Edge Function.
@@ -47,21 +47,25 @@ class AiChatController extends _$AiChatController {
 
     await intentResult.fold(
       (failure) async {
+        final message = _localizedFailure(failure);
         final errorMessage = ChatMessage(
           role: ChatRole.assistant,
-          content: failure.message,
+          content: message,
           timestamp: DateTime.now(),
         );
         state = state.copyWith(
           messages: [...state.messages, errorMessage],
           isProcessing: false,
+          error: message,
+          lastFailedText: userText,
         );
       },
       (intent) async {
         if (!intent.isConfident) {
           final msg = ChatMessage(
             role: ChatRole.assistant,
-            content: 'Xin lỗi, tôi không hiểu rõ yêu cầu. '
+            content:
+                'Xin lỗi, tôi không hiểu rõ yêu cầu. '
                 'Bạn có thể nói rõ hơn được không?',
             timestamp: DateTime.now(),
           );
@@ -77,11 +81,14 @@ class AiChatController extends _$AiChatController {
           case 'query_stock':
             await _handleQueryStock(intent.entities);
           case 'create_order':
+          case 'create_inbound_draft':
+          case 'create_outbound_draft':
             await _handleCreateOrder(intent.entities);
           default:
             final msg = ChatMessage(
               role: ChatRole.assistant,
-              content: 'Tôi nhận được yêu cầu "${intent.intent}" '
+              content:
+                  'Tôi nhận được yêu cầu "${intent.intent}" '
                   'nhưng chưa hỗ trợ xử lý.',
               timestamp: DateTime.now(),
             );
@@ -116,20 +123,23 @@ class AiChatController extends _$AiChatController {
     final result = await _createDraftOrder(entities);
     result.fold(
       (failure) {
+        final message = _localizedFailure(failure);
         final msg = ChatMessage(
           role: ChatRole.assistant,
-          content: 'Không thể tạo phiếu nháp: ${failure.message}',
+          content: 'Không thể tạo phiếu nháp: $message',
           timestamp: DateTime.now(),
         );
         state = state.copyWith(
           messages: [...state.messages, msg],
           isProcessing: false,
+          error: message,
         );
       },
       (draft) {
         final msg = ChatMessage(
           role: ChatRole.assistant,
-          content: 'AI đã tạo bản nháp **${draft.orderTypeLabel}** '
+          content:
+              'AI đã tạo bản nháp **${draft.orderTypeLabel}** '
               'với ${draft.items.length} mặt hàng. '
               'Vui lòng kiểm tra và xác nhận bên dưới.',
           timestamp: DateTime.now(),
@@ -145,10 +155,7 @@ class AiChatController extends _$AiChatController {
 
   /// Clears the pending draft after confirmation or cancellation.
   void clearDraft() {
-    state = AiChatState(
-      messages: state.messages,
-      isProcessing: state.isProcessing,
-    );
+    state = state.copyWith(pendingDraft: null);
   }
 
   /// Clears the chat history.
@@ -156,6 +163,12 @@ class AiChatController extends _$AiChatController {
     state = const AiChatState();
   }
 
+  String _localizedFailure(Failure failure) {
+    if (failure is AiFailure) {
+      return 'Không thể xử lý yêu cầu AI. Vui lòng thử lại.';
+    }
+    return failure.message;
+  }
 }
 
 /// State for the AI chat conversation.
@@ -164,21 +177,39 @@ class AiChatState {
     this.messages = const [],
     this.isProcessing = false,
     this.pendingDraft,
+    this.error,
+    this.lastFailedText,
   });
 
   final List<ChatMessage> messages;
   final bool isProcessing;
   final OrderDraft? pendingDraft;
+  final String? error;
+  final String? lastFailedText;
+
+  /// Backwards-compatible alias for callers that refer to the pending draft
+  /// as the current draft.
+  OrderDraft? get draft => pendingDraft;
 
   AiChatState copyWith({
     List<ChatMessage>? messages,
     bool? isProcessing,
-    OrderDraft? pendingDraft,
+    Object? pendingDraft = _unset,
+    Object? error = _unset,
+    Object? lastFailedText = _unset,
   }) {
     return AiChatState(
       messages: messages ?? this.messages,
       isProcessing: isProcessing ?? this.isProcessing,
-      pendingDraft: pendingDraft ?? this.pendingDraft,
+      pendingDraft: identical(pendingDraft, _unset)
+          ? this.pendingDraft
+          : pendingDraft as OrderDraft?,
+      error: identical(error, _unset) ? this.error : error as String?,
+      lastFailedText: identical(lastFailedText, _unset)
+          ? this.lastFailedText
+          : lastFailedText as String?,
     );
   }
+
+  static const _unset = Object();
 }

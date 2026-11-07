@@ -45,7 +45,9 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
     _isProcessingScan = true;
     await _scannerController.stop();
 
-    ref.read(pickVerifyControllerProvider.notifier).verifyScan(
+    ref
+        .read(pickVerifyControllerProvider.notifier)
+        .verifyScan(
           scannedBarcode: value,
           expectedBarcode: item.barcode,
           currentPicked: _pickedQuantity,
@@ -85,7 +87,6 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +136,4 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
             ),
     );
   }
-
 }
-
