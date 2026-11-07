@@ -28,4 +28,7 @@ abstract final class RouteNames {
 
   // ── AI Assistant ──────────────────────────────────────────────────
   static const String aiChat = 'ai-chat';
+
+  // ── Reports ─────────────────────────────────────────────────────
+  static const String reports = 'reports';
 }

@@ -41,7 +41,9 @@ final class AiChatControllerProvider
   }
 }
 
-String _$aiChatControllerHash() => r'226a9cae00ba49dd255a6607d7c9cc2daa3b025d';
+String _$aiChatControllerHash() => r'085f405d9c70031bf4e287ec851e7172fd91b4c7';
+
+/// Controller managing the AI assistant chat conversation.
 
 abstract class _$AiChatController extends $Notifier<AiChatState> {
   AiChatState build();

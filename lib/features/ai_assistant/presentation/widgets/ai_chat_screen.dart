@@ -1,16 +1,12 @@
-import 'dart:async';
-
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:smart_wms/core/preview/preview_mode.dart';
-import 'package:smart_wms/core/services/voice_input_service.dart';
-import 'package:smart_wms/core/widgets/confirm_dialog.dart';
-import 'package:smart_wms/core/widgets/workspace_layout.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:smart_wms/core/di/ai_assistant_providers.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/chat_message.dart';
+import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft.dart';
 import 'package:smart_wms/features/ai_assistant/presentation/controllers/ai_chat_controller.dart';
 
-class AiChatScreen extends ConsumerStatefulWidget {
+class AiChatScreen extends HookConsumerWidget {
   const AiChatScreen({super.key});
   @override
   ConsumerState<AiChatScreen> createState() => _AiChatScreenState();
@@ -23,12 +19,62 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   String? voiceError;
   bool voiceBusy = false;
   @override
-  void dispose() {
-    text.dispose();
-    scroll.dispose();
-    unawaited(voice.dispose());
-    super.dispose();
-  }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chatState = ref.watch(aiChatControllerProvider);
+    final textController = useTextEditingController();
+    final scrollController = useScrollController();
+    final speechService = ref.watch(speechServiceProvider);
+    final isListeningState = useState(false);
+
+    useEffect(() {
+      if (scrollController.hasClients) {
+        scrollController.animateTo(
+          scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+      return null;
+    }, [chatState.messages.length]);
+
+    useEffect(() {
+      if (chatState.pendingDraft != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showDraftPreviewSheet(context, ref, chatState.pendingDraft!);
+        });
+      }
+      return null;
+    }, [chatState.pendingDraft]);
+
+    Future<void> toggleListening() async {
+      if (isListeningState.value) {
+        await speechService.stopListening();
+        isListeningState.value = false;
+      } else {
+        final available = await speechService.initialize();
+        if (!available) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Không thể khởi động micro.')),
+            );
+          }
+          return;
+        }
+        isListeningState.value = true;
+        await speechService.startListening(
+          onResult: (result) {
+            textController.text = result.recognizedWords;
+            if (result.finalResult) {
+              isListeningState.value = false;
+              if (textController.text.trim().isNotEmpty) {
+                ref.read(aiChatControllerProvider.notifier).sendMessage(textController.text);
+                textController.clear();
+              }
+            }
+          },
+        );
+      }
+    }
 
   @override
   Widget build(BuildContext context) {
@@ -41,132 +87,74 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       });
     });
     return Scaffold(
-      body: SafeArea(
-        child: WorkspaceContent(
-          maxWidth: 960,
-          child: Column(
-            children: [
-              Padding(
-                padding: workspacePadding(context).copyWith(bottom: 0),
-                child: WorkspaceHeader(
-                  title: 'Trợ lý kho',
-                  description:
-                      'Hỏi về tồn kho và chuẩn bị phiếu nháp để kiểm tra.',
-                  actions: [
-                    TextButton.icon(
-                      onPressed: state.isProcessing || state.messages.isEmpty
-                          ? null
-                          : () async {
-                              if (await ConfirmDialog.show(
-                                context,
-                                title: 'Xóa cuộc trò chuyện?',
-                                content:
-                                    'Lịch sử hội thoại trong phiên sẽ bị xóa.',
-                              )) {
-                                if (mounted) {
-                                  ref
-                                      .read(aiChatControllerProvider.notifier)
-                                      .clearChat();
-                                }
-                              }
-                            },
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Xóa cuộc trò chuyện'),
+      appBar: AppBar(
+        title: const Text('Trợ lý AI Kho Hàng'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () => ref.read(aiChatControllerProvider.notifier).clearChat(),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: chatState.messages.isEmpty
+                ? const _EmptyChat()
+                : ListView.builder(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: chatState.messages.length,
+                    itemBuilder: (context, index) => _ChatBubble(message: chatState.messages[index]),
+                  ),
+          ),
+          if (chatState.isProcessing) const LinearProgressIndicator(),
+          if (isListeningState.value)
+            Container(
+              color: Colors.red.withValues(alpha: 0.1),
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  const Icon(Icons.mic, color: Colors.red),
+                  const SizedBox(width: 8),
+                  const Text('Đang lắng nghe...'),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () async {
+                      await speechService.stopListening();
+                      isListeningState.value = false;
+                    },
+                    child: const Text('Dừng'),
+                  ),
+                ],
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: toggleListening,
+                  icon: Icon(
+                    isListeningState.value ? Icons.mic : Icons.mic_none,
+                    color: isListeningState.value ? Colors.red : null,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: textController,
+                    decoration: InputDecoration(
+                      hintText: 'Hỏi tồn kho hoặc tạo phiếu...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
-                  ],
-                ),
-              ),
-              if (ref.watch(frontendPreviewProvider))
-                const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text(
-                    'AI MÔ PHỎNG · Gõ “tồn kho” hoặc “phiếu nhập nháp” / “phiếu xuất nháp”. Fixture luôn dùng 5 đôi găng tay tại A-01-01-01.',
+                    onSubmitted: (text) => _sendMessage(ref, textController),
                   ),
                 ),
-              Expanded(
-                child: state.messages.isEmpty
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text(
-                            'Hỏi tồn kho theo SKU hoặc yêu cầu phiếu nháp.\nMọi phiếu phải được bạn kiểm tra và xác nhận.',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: scroll,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: state.messages.length,
-                        itemBuilder: (context, index) {
-                          final message = state.messages[index];
-                          final user = message.role == ChatRole.user;
-                          return Align(
-                            alignment: user
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              constraints: const BoxConstraints(maxWidth: 660),
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: user
-                                    ? Theme.of(context)
-                                          .colorScheme
-                                          .primaryContainer
-                                    : Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: SelectableText(message.content),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-              if (state.isProcessing) const LinearProgressIndicator(),
-              if (state.error != null)
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    children: [
-                      Expanded(child: Text(state.error!)),
-                      TextButton(
-                        onPressed: state.isProcessing
-                            ? null
-                            : () => ref
-                                  .read(aiChatControllerProvider.notifier)
-                                  .sendMessage(state.lastFailedText!),
-                        child: const Text('Thử lại'),
-                      ),
-                    ],
-                  ),
-                ),
-              if (state.draft != null)
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Wrap(
-                    spacing: 12,
-                    children: [
-                      FilledButton(
-                        onPressed: () =>
-                            context.go('/ai-draft', extra: state.draft),
-                        child: const Text('Xem & sửa phiếu nháp'),
-                      ),
-                      TextButton(
-                        onPressed: () => ref
-                            .read(aiChatControllerProvider.notifier)
-                            .dismissDraft(),
-                        child: const Text('Hủy bản nháp'),
-                      ),
-                    ],
-                  ),
-                ),
-              if (voiceError != null)
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text(voiceError!),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: chatState.isProcessing ? null : () => _sendMessage(ref, textController),
+                  icon: const Icon(Icons.send),
                 ),
               if (voice.listening)
                 const Text(
@@ -228,44 +216,112 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     text.clear();
   }
 
-  Future<void> toggleVoice() async {
-    if (voice.listening) {
-      await voice.stop();
-      if (mounted) setState(() {});
-      return;
-    }
-    setState(() {
-      voiceBusy = true;
-      voiceError = null;
-    });
-    try {
-      final ready = await voice.start(
-        onText: (value) {
-          if (mounted) {
-            text.text = value;
-            text.selection = TextSelection.collapsed(offset: value.length);
-          }
-        },
-        onError: (error) {
-          if (mounted) setState(() => voiceError = error);
-        },
-        onStatus: () {
-          if (mounted) setState(() {});
-        },
-      );
-      if (!ready && mounted) {
-        setState(
-          () => voiceError = 'Không mở được micro. Kiểm tra quyền, trình duyệt hoặc nhập văn bản.',
-        );
-      }
-    } on Exception {
-      if (mounted) {
-        setState(
-          () => voiceError = 'Nhập giọng nói chưa khả dụng trên thiết bị này.',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => voiceBusy = false);
-    }
+  void _showDraftPreviewSheet(BuildContext context, WidgetRef ref, OrderDraft draft) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+          left: 16,
+          right: 16,
+          top: 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(draft.isInbound ? Icons.input : Icons.output),
+                const SizedBox(width: 8),
+                Text('Xác nhận ', style: Theme.of(context).textTheme.titleLarge),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text('Vui lòng kiểm tra lại phiếu nháp trước khi lưu.'),
+            const SizedBox(height: 16),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: draft.items.length,
+                itemBuilder: (context, index) {
+                  final item = draft.items[index];
+                  return Card(
+                    child: ListTile(
+                      title: Text(item.productName),
+                      subtitle: const Text('SKU: N/A'),
+                      trailing: const Text('Số lượng'),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    ref.read(aiChatControllerProvider.notifier).clearDraft();
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Hủy'),
+                ),
+                const SizedBox(width: 12),
+                FilledButton.icon(
+                  onPressed: () {
+                    ref.read(aiChatControllerProvider.notifier).clearDraft();
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Đã lưu phiếu thành công!')),
+                    );
+                  },
+                  icon: const Icon(Icons.check),
+                  label: const Text('Xác nhận lưu'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyChat extends StatelessWidget {
+  const _EmptyChat();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('Xin chào! Hãy hỏi tôi về tồn kho hoặc tạo phiếu nhé!', textAlign: TextAlign.center));
+  }
+}
+
+class _ChatBubble extends StatelessWidget {
+  const _ChatBubble({required this.message});
+
+  final ChatMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final isUser = message.role == ChatRole.user;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.75),
+        decoration: BoxDecoration(
+          color: isUser ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(message.content),
+      ),
+    );
   }
 }

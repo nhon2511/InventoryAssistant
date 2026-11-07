@@ -194,5 +194,89 @@ final _mainShellRoute = ShellRoute(
       name: RouteNames.aiChat,
       builder: (context, state) => const AiChatScreen(),
     ),
+    GoRoute(
+      path: '/reports',
+      name: RouteNames.reports,
+      builder: (context, state) => const ReportsScreen(),
+    ),
   ],
 );
+
+/// Main app shell with bottom navigation bar.
+class _MainShell extends StatelessWidget {
+  const _MainShell({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _calculateSelectedIndex(context),
+        onDestinationSelected: (index) => _onItemTapped(index, context),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: 'Tổng quan',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.inventory_2_outlined),
+            selectedIcon: Icon(Icons.inventory_2),
+            label: 'Sản phẩm',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.input_outlined),
+            selectedIcon: Icon(Icons.input),
+            label: 'Nhập kho',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.output_outlined),
+            selectedIcon: Icon(Icons.output),
+            label: 'Xuất kho',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.assessment_outlined),
+            selectedIcon: Icon(Icons.assessment),
+            label: 'Báo cáo',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.smart_toy_outlined),
+            selectedIcon: Icon(Icons.smart_toy),
+            label: 'AI',
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _calculateSelectedIndex(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    if (location.startsWith('/products') || location.startsWith('/locations')) {
+      return 1;
+    }
+    if (location.startsWith('/inbound')) return 2;
+    if (location.startsWith('/outbound')) return 3;
+    if (location.startsWith('/reports')) return 4;
+    if (location.startsWith('/ai-chat')) return 5;
+    return 0;
+  }
+
+  void _onItemTapped(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        context.goNamed(RouteNames.home);
+      case 1:
+        context.goNamed(RouteNames.productList);
+      case 2:
+        context.goNamed(RouteNames.inboundList);
+      case 3:
+        context.goNamed(RouteNames.outboundList);
+      case 4:
+        context.goNamed(RouteNames.reports);
+      case 5:
+        context.goNamed(RouteNames.aiChat);
+    }
+  }
+}

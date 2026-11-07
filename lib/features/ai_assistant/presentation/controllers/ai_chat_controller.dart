@@ -4,13 +4,27 @@ import 'package:smart_wms/core/di/inventory_providers.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/chat_message.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft_preview.dart';
 import 'package:smart_wms/features/ai_assistant/domain/usecases/resolve_order_draft_usecase.dart';
+import 'package:smart_wms/features/ai_assistant/domain/entities/order_draft.dart';
+import 'package:smart_wms/features/ai_assistant/domain/usecases/create_draft_order_usecase.dart';
+import 'package:smart_wms/features/ai_assistant/domain/usecases/parse_intent_usecase.dart';
+import 'package:smart_wms/features/ai_assistant/domain/usecases/query_stock_usecase.dart';
 
 part 'ai_chat_controller.g.dart';
 
 @riverpod
 class AiChatController extends _$AiChatController {
+  late final ParseIntentUseCase _parseIntent;
+  late final QueryStockUseCase _queryStock;
+  late final CreateDraftOrderUseCase _createDraftOrder;
+
   @override
-  AiChatState build() => const AiChatState();
+  AiChatState build() {
+    _parseIntent = ref.watch(parseIntentUseCaseProvider);
+    _queryStock = ref.watch(queryStockUseCaseProvider);
+    _createDraftOrder = ref.watch(createDraftOrderUseCaseProvider);
+
+    return const AiChatState();
+  }
 
   Future<void> sendMessage(String userText) async {
     if (userText.trim().isEmpty || state.isProcessing) return;
@@ -26,65 +40,117 @@ class AiChatController extends _$AiChatController {
       ],
       isProcessing: true,
     );
-    OrderDraftPreview? draft;
-    String? error;
-    String response;
-    try {
-      final intentResult = await ref.read(parseIntentUseCaseProvider)(text);
-      response = await intentResult.fold(
-        (failure) async {
-          error = 'Không xử lý được yêu cầu. Kiểm tra kết nối và thử lại.';
-          return error!;
-        },
-        (intent) async {
-          if (!intent.isConfident) {
-            return 'Chưa hiểu rõ yêu cầu. Vui lòng cung cấp SKU, số lượng và vị trí cụ thể.';
-          }
-          if (intent.intent == 'query_stock') {
-            final result = await ref.read(queryStockUseCaseProvider)(
-              intent.entities,
-            );
-            return result.fold((failure) {
-              error = 'Không truy vấn được tồn kho. Vui lòng thử lại.';
-              return error!;
-            }, (answer) => answer);
-          }
-          if ([
-            'create_order',
-            'create_inbound_draft',
-            'create_outbound_draft',
-          ].contains(intent.intent)) {
-            final result = await ResolveOrderDraftUseCase(
-              ref.read(inventoryRepositoryProvider),
-            )(intent);
-            return result.fold((failure) => failure.message, (preview) {
-              draft = preview;
-              return 'Đã chuẩn bị bản xem trước. Mở để kiểm tra, sửa hoặc hủy. Chưa lưu phiếu và chưa thay đổi tồn kho.';
-            });
-          }
-          return 'Chưa hỗ trợ yêu cầu này. Bạn có thể tra tồn hoặc tạo phiếu nháp.';
-        },
-      );
-    } on Exception {
-      error = 'Không kết nối được trợ lý. Vui lòng thử lại.';
-      response = error!;
-    }
-    if (!ref.mounted) return;
-    state = AiChatState(
-      messages: [
-        ...state.messages,
-        ChatMessage(
+
+    // Step 1: Parse intent via LLM Edge Function.
+    final intentResult = await _parseIntent(userText);
+
+    await intentResult.fold(
+      (failure) async {
+        final errorMessage = ChatMessage(
           role: ChatRole.assistant,
-          content: response,
+          content: failure.message,
           timestamp: DateTime.now(),
-        ),
-      ],
-      draft: draft,
-      error: error,
-      lastFailedText: error == null ? null : text,
+        );
+        state = state.copyWith(
+          messages: [...state.messages, errorMessage],
+          isProcessing: false,
+        );
+      },
+      (intent) async {
+        if (!intent.isConfident) {
+          final msg = ChatMessage(
+            role: ChatRole.assistant,
+            content: 'Xin lỗi, tôi không hiểu rõ yêu cầu. '
+                'Bạn có thể nói rõ hơn được không?',
+            timestamp: DateTime.now(),
+          );
+          state = state.copyWith(
+            messages: [...state.messages, msg],
+            isProcessing: false,
+          );
+          return;
+        }
+
+        // Step 2: Execute action based on intent.
+        switch (intent.intent) {
+          case 'query_stock':
+            await _handleQueryStock(intent.entities);
+          case 'create_order':
+            await _handleCreateOrder(intent.entities);
+          default:
+            final msg = ChatMessage(
+              role: ChatRole.assistant,
+              content: 'Tôi nhận được yêu cầu "${intent.intent}" '
+                  'nhưng chưa hỗ trợ xử lý.',
+              timestamp: DateTime.now(),
+            );
+            state = state.copyWith(
+              messages: [...state.messages, msg],
+              isProcessing: false,
+            );
+        }
+      },
     );
   }
 
+  Future<void> _handleQueryStock(Map<String, String> entities) async {
+    final result = await _queryStock(entities);
+    final content = result.fold(
+      (failure) => 'Lỗi khi truy vấn: ${failure.message}',
+      (answer) => answer,
+    );
+
+    final msg = ChatMessage(
+      role: ChatRole.assistant,
+      content: content,
+      timestamp: DateTime.now(),
+    );
+    state = state.copyWith(
+      messages: [...state.messages, msg],
+      isProcessing: false,
+    );
+  }
+
+  Future<void> _handleCreateOrder(Map<String, String> entities) async {
+    final result = await _createDraftOrder(entities);
+    result.fold(
+      (failure) {
+        final msg = ChatMessage(
+          role: ChatRole.assistant,
+          content: 'Không thể tạo phiếu nháp: ${failure.message}',
+          timestamp: DateTime.now(),
+        );
+        state = state.copyWith(
+          messages: [...state.messages, msg],
+          isProcessing: false,
+        );
+      },
+      (draft) {
+        final msg = ChatMessage(
+          role: ChatRole.assistant,
+          content: 'AI đã tạo bản nháp **${draft.orderTypeLabel}** '
+              'với ${draft.items.length} mặt hàng. '
+              'Vui lòng kiểm tra và xác nhận bên dưới.',
+          timestamp: DateTime.now(),
+        );
+        state = state.copyWith(
+          messages: [...state.messages, msg],
+          isProcessing: false,
+          pendingDraft: draft,
+        );
+      },
+    );
+  }
+
+  /// Clears the pending draft after confirmation or cancellation.
+  void clearDraft() {
+    state = AiChatState(
+      messages: state.messages,
+      isProcessing: state.isProcessing,
+    );
+  }
+
+  /// Clears the chat history.
   void clearChat() {
     if (!state.isProcessing) state = const AiChatState();
   }
@@ -100,13 +166,22 @@ class AiChatState {
   const AiChatState({
     this.messages = const [],
     this.isProcessing = false,
-    this.draft,
-    this.error,
-    this.lastFailedText,
+    this.pendingDraft,
   });
+
   final List<ChatMessage> messages;
   final bool isProcessing;
-  final OrderDraftPreview? draft;
-  final String? error;
-  final String? lastFailedText;
+  final OrderDraft? pendingDraft;
+
+  AiChatState copyWith({
+    List<ChatMessage>? messages,
+    bool? isProcessing,
+    OrderDraft? pendingDraft,
+  }) {
+    return AiChatState(
+      messages: messages ?? this.messages,
+      isProcessing: isProcessing ?? this.isProcessing,
+      pendingDraft: pendingDraft ?? this.pendingDraft,
+    );
+  }
 }
