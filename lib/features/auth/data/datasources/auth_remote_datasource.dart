@@ -84,7 +84,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on supabase.AuthException catch (e) {
       throw AuthException(message: e.message, statusCode: 400);
     } on supabase.PostgrestException catch (e) {
-      throw ServerException(message: e.message, statusCode: e.code as int?);
+      throw ServerException(
+        message: e.message,
+        statusCode: int.tryParse(e.code ?? ''),
+      );
     }
   }
 
