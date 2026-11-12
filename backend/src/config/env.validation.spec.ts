@@ -103,26 +103,31 @@ describe('validateEnvironment', () => {
     );
   });
 
-  it('should validate API_PREFIX format', () => {
-    expect(() =>
-      validateEnvironment({
-        DATABASE_URL: validDbUrl,
-        API_PREFIX: 'api/v1', // missing leading slash
-      }),
-    ).toThrow(/API_PREFIX must start with \/ and not end with \//);
+  it('should normalize and validate API_PREFIX format', () => {
+    const unslashed = validateEnvironment({
+      DATABASE_URL: validDbUrl,
+      API_PREFIX: 'api/v1',
+    });
+    expect(unslashed.API_PREFIX).toBe('/api/v1');
 
-    expect(() =>
-      validateEnvironment({
-        DATABASE_URL: validDbUrl,
-        API_PREFIX: '/api/v1/', // trailing slash
-      }),
-    ).toThrow(/API_PREFIX must start with \/ and not end with \//);
+    const trailingSlash = validateEnvironment({
+      DATABASE_URL: validDbUrl,
+      API_PREFIX: '/api/v1/',
+    });
+    expect(trailingSlash.API_PREFIX).toBe('/api/v1');
 
     const valid = validateEnvironment({
       DATABASE_URL: validDbUrl,
       API_PREFIX: '/custom/api',
     });
     expect(valid.API_PREFIX).toBe('/custom/api');
+
+    expect(() =>
+      validateEnvironment({
+        DATABASE_URL: validDbUrl,
+        API_PREFIX: 'invalid!#@prefix',
+      }),
+    ).toThrow(/API_PREFIX must be a valid path/);
   });
 
   it('should validate SUPABASE_URL if provided', () => {

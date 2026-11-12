@@ -11,7 +11,13 @@ import { PrismaModule } from './prisma/prisma.module.js';
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnvironment,
-      envFilePath: ['.env', '.env.example'],
+      envFilePath: [
+        '.env',
+        'backend/.env',
+        '.env.local',
+        'backend/.env.local',
+      ],
+      cache: true,
     }),
     PrismaModule,
     HealthModule,

@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Type, plainToInstance } from 'class-transformer';
+import { Transform, Type, plainToInstance } from 'class-transformer';
 import {
   IsEnum,
   IsInt,
@@ -22,7 +22,7 @@ export enum Environment {
 }
 
 const POSTGRES_URI_REGEX = /^(postgres|postgresql):\/\/.+/;
-const API_PREFIX_REGEX = /^\/[a-zA-Z0-9_\-/]*[^/]$/;
+const API_PREFIX_REGEX = /^\/[a-zA-Z0-9_-]+(\/[a-zA-Z0-9_-]+)*$/;
 
 export class EnvironmentVariables {
   @IsEnum(Environment, {
@@ -38,9 +38,14 @@ export class EnvironmentVariables {
   @IsOptional()
   PORT: number = 3000;
 
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim().replace(/^\/+/, '').replace(/\/+$/, '');
+    return trimmed ? `/${trimmed}` : '/api/v1';
+  })
   @IsString({ message: 'API_PREFIX must be a string' })
   @Matches(API_PREFIX_REGEX, {
-    message: 'API_PREFIX must start with / and not end with / (e.g. /api/v1)',
+    message: 'API_PREFIX must be a valid path (e.g. /api/v1)',
   })
   @IsOptional()
   API_PREFIX: string = '/api/v1';
