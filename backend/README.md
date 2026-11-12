@@ -1,132 +1,119 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 📦 Smart WMS — Backend Service (NestJS + Prisma + Supabase)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Dịch vụ backend xử lý nghiệp vụ trung tâm cho hệ sinh thái quản lý kho hàng **Smart WMS**, được xây dựng trên nền tảng **NestJS (TypeScript)**, **Prisma ORM** và **Supabase PostgreSQL**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 🏛️ Kiến Trúc Hệ Thống
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```text
+Flutter Mobile / Web  ──(Bearer JWT)──►  NestJS API Gateway (/api/v1)
+                                              │
+                      ┌───────────────────────┴───────────────────────┐
+                      ▼                                               ▼
+             Supabase Auth (GoTrue)                        PostgreSQL Database
+             - JWT Signature Verify                        - Prisma Client (ACID Transactions)
+             - User Profiles & Roles                       - Supavisor Connection Pool (6543)
 ```
 
-## Compile and run the project
+- **REST API Prefix**: `/api/v1`
+- **Swagger Documentation**: `/docs`
+- **Health Check Endpoint**: `/api/v1/health`
 
+---
+
+## 🚫 Chính Sách Không Dùng Docker (NO DOCKER POLICY)
+
+Dự án tuân thủ nghiêm ngặt nguyên tắc phát triển trực tiếp trên môi trường máy chủ cục bộ (Node.js runtime):
+- Không yêu cầu hay sử dụng Docker / Docker Compose.
+- Kết nối trực tiếp tới cơ sở dữ liệu Supabase Cloud (development/staging project).
+- Khởi chạy nhanh chóng bằng lệnh tiêu chuẩn `npm run start:dev`.
+
+---
+
+## ⚙️ Yêu Cầu Môi Trường & Cài Đặt
+
+### 1. Yêu cầu tiên quyết
+- **Node.js**: `>= 20.x` (khuyến nghị `22.x` hoặc `24.x`)
+- **npm**: `>= 10.x`
+
+### 2. Cài đặt Dependencies
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cd backend
+npm install
+npm run prisma:generate
 ```
 
-## Run tests
-
+### 3. Cấu hình biến môi trường
+Tạo file `.env` tại thư mục `backend/` dựa trên mẫu `.env.example`:
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp .env.example .env
 ```
 
-## Deployment
+Cấu hình các tham số chính:
+```env
+PORT=3000
+API_PREFIX=/api/v1
+NODE_ENV=development
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+# Chuỗi kết nối Supabase Cloud:
+# Direct connection (Session mode):
+DIRECT_URL="postgresql://postgres.[REF]:[PASS]@aws-0-[REGION].pooler.supabase.com:5432/postgres?sslmode=require"
+# Transaction Pooler (Supavisor port 6543):
+DATABASE_URL="postgresql://postgres.[REF]:[PASS]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require"
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Supabase Auth
+SUPABASE_URL="https://your-project.supabase.co"
+SUPABASE_ANON_KEY="your-anon-key"
+SUPABASE_JWT_SECRET="your-jwt-secret"
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Observability
+## 🚀 Khởi Chạy Ứng Dụng
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project, run this and approve the code it prints at [observe.nestjs.com/link](https://observe.nestjs.com/link) - signing up for free if you have no account:
-
+Tại thư mục `backend/`:
 ```bash
-$ npx @nestjs/observe link
+# Development mode (Hot-reload)
+npm run start:dev
+
+# Production build
+npm run build
+npm run start:prod
 ```
 
-It installs `@nestjs/observe`, wires it into `AppModule` and `main.ts`, and writes the app key and secret into `.env`, which every `nest start` script (`start`, `start:dev`, `start:debug`) then loads. In production, set `OBSERVE_APP_KEY` and `OBSERVE_APP_SECRET` in the environment instead.
-
-Or do it by hand:
-
+Hoặc chạy từ thư mục gốc của repository:
 ```bash
-$ npm install @nestjs/observe
+npm run backend:dev
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/sdk) - it takes a single import and an app key.
+Truy cập:
+- **API Base**: `http://localhost:3000/api/v1`
+- **Health Check**: `http://localhost:3000/api/v1/health`
+- **Swagger Docs**: `http://localhost:3000/docs`
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+---
 
-## Resources
+## 🧪 Kiểm Thử & Kiểm Soát Chất Lượng (Quality Gates)
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+# Kiểm tra linter
+npm run lint
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+# Chạy Unit Tests
+npm test
 
-## Support
+# Chạy E2E Tests
+npm run test:e2e
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+# Biên dịch mã nguồn
+npm run build
+```
 
-## Stay in touch
+---
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 🛡️ Nguyên Tắc An Toàn Dữ Liệu (Database Safety)
 
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+1. **Không chạy `prisma db push` hay `prisma migrate deploy` trên Production Database** mà chưa có kế hoạch review được phê duyệt.
+2. Không commit file `.env` chứa mật khẩu thực vào Git repository.
+3. Khi phát triển cục bộ, sử dụng project Supabase Development riêng biệt.
