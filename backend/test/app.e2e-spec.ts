@@ -1,18 +1,33 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AllExceptionsFilter } from '../src/common/filters/http-exception.filter.js';
 import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor.js';
+import { PrismaService } from '../src/prisma/prisma.service.js';
 import { AppModule } from './../src/app.module.js';
 
 describe('Smart WMS Backend (e2e)', () => {
   let app: INestApplication;
+  let mockPrismaService: {
+    $connect: ReturnType<typeof vi.fn>;
+    $disconnect: ReturnType<typeof vi.fn>;
+    checkHealth: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
+    mockPrismaService = {
+      $connect: vi.fn(),
+      $disconnect: vi.fn(),
+      checkHealth: vi.fn().mockResolvedValue(true),
+    };
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(PrismaService)
+      .useValue(mockPrismaService)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api/v1');
@@ -33,7 +48,9 @@ describe('Smart WMS Backend (e2e)', () => {
     await app.close();
   });
 
-  it('GET /api/v1/health should return 200 and structured health envelope', async () => {
+  it('GET /api/v1/health should return 200 and structured health envelope when DB is connected', async () => {
+    mockPrismaService.checkHealth.mockResolvedValue(true);
+
     const response = await request(app.getHttpServer())
       .get('/api/v1/health')
       .expect(200);
@@ -41,10 +58,9 @@ describe('Smart WMS Backend (e2e)', () => {
     expect(response.body).toHaveProperty('success', true);
     expect(response.body).toHaveProperty('statusCode', 200);
     expect(response.body).toHaveProperty('data');
-    expect(response.body.data).toHaveProperty('status');
+    expect(response.body.data).toHaveProperty('status', 'ok');
     expect(response.body.data).toHaveProperty('version', '1.0.0');
-    expect(response.body.data).toHaveProperty('services');
-    expect(response.body.data.services).toHaveProperty('database');
+    expect(response.body.data.services).toHaveProperty('database', 'connected');
     expect(response.body).toHaveProperty('timestamp');
   });
 
@@ -60,7 +76,22 @@ describe('Smart WMS Backend (e2e)', () => {
     expect(response.body.data.uptime).toBeGreaterThanOrEqual(0);
   });
 
-  it('GET /api/v1/health/readiness should return 503 when database is disconnected in test mode', async () => {
+  it('GET /api/v1/health/readiness should return 200 when database is healthy', async () => {
+    mockPrismaService.checkHealth.mockResolvedValue(true);
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/health/readiness')
+      .expect(200);
+
+    expect(response.body).toHaveProperty('success', true);
+    expect(response.body).toHaveProperty('statusCode', 200);
+    expect(response.body.data).toHaveProperty('status', 'ready');
+    expect(response.body.data).toHaveProperty('database', 'connected');
+  });
+
+  it('GET /api/v1/health/readiness should return 503 when database is disconnected', async () => {
+    mockPrismaService.checkHealth.mockResolvedValue(false);
+
     const response = await request(app.getHttpServer())
       .get('/api/v1/health/readiness')
       .expect(503);

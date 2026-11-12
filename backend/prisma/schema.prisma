@@ -1,5 +1,6 @@
 // ==============================================================================
 // Prisma Schema — Smart WMS (Supabase PostgreSQL Compatible)
+// Aligned with Supabase PostgreSQL 17.6 Schema (TASK-DB-04A)
 // ==============================================================================
 
 generator client {
@@ -13,6 +14,8 @@ datasource db {
 }
 
 // ── Enums ────────────────────────────────────────────────────────────────────
+// Application enums used for validation and domain contracts.
+// Note: In PostgreSQL schema, these values are stored as text.
 
 enum UserRole {
   ADMIN
@@ -35,15 +38,14 @@ enum OrderStatus {
 // ── Models ───────────────────────────────────────────────────────────────────
 
 model Profile {
-  id        String   @id @default(uuid()) @db.Uuid
-  email     String   @unique
-  fullName  String?  @map("full_name")
-  role      UserRole @default(STAFF)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String   @id @default(uuid()) @db.Uuid
+  fullName    String   @map("full_name")
+  role        String   @default("STAFF")
+  phoneNumber String?  @map("phone_number")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  createdOrders  WarehouseOrder[] @relation("CreatedOrders")
-  reviewedOrders WarehouseOrder[] @relation("ReviewedOrders")
+  createdOrders WarehouseOrder[] @relation("CreatedOrders")
 
   @@map("profiles")
 }
@@ -54,10 +56,10 @@ model Product {
   barcode        String   @unique
   name           String
   description    String?
-  unit           String   @default("Cái")
+  unit           String   @default("Pcs")
   minSafetyStock Int      @default(0) @map("min_safety_stock")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   inventoryItems InventoryItem[]
   orderItems     WarehouseOrderItem[]
@@ -69,59 +71,54 @@ model Product {
 }
 
 model Location {
-  id        String   @id @default(uuid()) @db.Uuid
-  zone      String
-  aisle     String
-  rack      String
-  bin       String
-  barcode   String   @unique
-  capacity  Int?
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id              String   @id @default(uuid()) @db.Uuid
+  zoneCode        String   @map("zone_code")
+  aisleCode       String   @map("aisle_code")
+  rackCode        String   @map("rack_code")
+  binCode         String   @map("bin_code")
+  locationBarcode String   @unique @map("location_barcode")
+  maxCapacityKg   Decimal? @map("max_capacity_kg") @db.Decimal
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   inventoryItems InventoryItem[]
   orderItems     WarehouseOrderItem[]
   stockLedgers   StockLedger[]
 
-  @@unique([zone, aisle, rack, bin])
-  @@index([barcode])
+  @@index([locationBarcode])
   @@map("locations")
 }
 
 model InventoryItem {
-  id               String   @id @default(uuid()) @db.Uuid
-  productId        String   @map("product_id") @db.Uuid
-  locationId       String   @map("location_id") @db.Uuid
-  quantityOnHand   Int      @default(0) @map("quantity_on_hand")
-  quantityReserved Int      @default(0) @map("quantity_reserved")
-  lotNumber        String?  @map("lot_number")
-  expiryDate       String?  @map("expiry_date")
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id               String    @id @default(uuid()) @db.Uuid
+  productId        String    @map("product_id") @db.Uuid
+  locationId       String    @map("location_id") @db.Uuid
+  quantityOnHand   Int       @default(0) @map("quantity_on_hand")
+  quantityReserved Int       @default(0) @map("quantity_reserved")
+  lotNumber        String?   @map("lot_number")
+  expiryDate       DateTime? @map("expiry_date") @db.Date
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
   location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
 
-  @@unique([productId, locationId])
+  @@unique([productId, locationId, lotNumber])
   @@index([productId])
   @@index([locationId])
   @@map("inventory_items")
 }
 
 model WarehouseOrder {
-  id         String      @id @default(uuid()) @db.Uuid
-  orderCode  String      @unique @map("order_code")
-  type       OrderType
-  status     OrderStatus @default(DRAFT)
-  createdBy  String?     @map("created_by") @db.Uuid
-  reviewedBy String?     @map("reviewed_by") @db.Uuid
-  note       String?
-  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id        String   @id @default(uuid()) @db.Uuid
+  orderCode String   @unique @map("order_code")
+  type      String
+  status    String   @default("DRAFT")
+  createdBy String?  @map("created_by") @db.Uuid
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  creator  Profile?             @relation("CreatedOrders", fields: [createdBy], references: [id], onDelete: SetNull)
-  reviewer Profile?             @relation("ReviewedOrders", fields: [reviewedBy], references: [id], onDelete: SetNull)
-  items    WarehouseOrderItem[]
+  creator Profile?             @relation("CreatedOrders", fields: [createdBy], references: [id], onDelete: SetNull)
+  items   WarehouseOrderItem[]
 
   @@index([type])
   @@index([status])
@@ -129,15 +126,15 @@ model WarehouseOrder {
 }
 
 model WarehouseOrderItem {
-  id               String   @id @default(uuid()) @db.Uuid
-  orderId          String   @map("order_id") @db.Uuid
-  productId        String   @map("product_id") @db.Uuid
-  locationId       String?  @map("location_id") @db.Uuid
-  expectedQuantity Int      @map("expected_quantity")
-  actualQuantity   Int      @default(0) @map("actual_quantity")
-  lotNumber        String?  @map("lot_number")
-  expiryDate       String?  @map("expiry_date")
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id               String    @id @default(uuid()) @db.Uuid
+  orderId          String    @map("order_id") @db.Uuid
+  productId        String    @map("product_id") @db.Uuid
+  locationId       String?   @map("location_id") @db.Uuid
+  expectedQuantity Int       @map("expected_quantity")
+  actualQuantity   Int       @default(0) @map("actual_quantity")
+  lotNumber        String?   @map("lot_number")
+  expiryDate       DateTime? @map("expiry_date") @db.Date
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   order    WarehouseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product  Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
@@ -148,6 +145,7 @@ model WarehouseOrderItem {
   @@map("warehouse_order_items")
 }
 
+// NOTE: Table stock_ledger will be created in TASK-DB-04B migration.
 model StockLedger {
   id              String   @id @default(uuid()) @db.Uuid
   transactionType String   @map("transaction_type")
@@ -169,6 +167,7 @@ model StockLedger {
   @@map("stock_ledger")
 }
 
+// NOTE: Table idempotency_keys will be created in TASK-DB-04B migration.
 model IdempotencyKey {
   key        String   @id
   path       String
