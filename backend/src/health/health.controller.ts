@@ -1,6 +1,7 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 export interface HealthResponse {
@@ -91,10 +92,20 @@ export class HealthController {
   @ApiOperation({ summary: 'Service readiness check' })
   @ApiResponse({
     status: 200,
-    description: 'Service database readiness check',
+    description: 'Service is ready to handle traffic',
   })
-  async checkReadiness(): Promise<ReadinessResponse> {
+  @ApiResponse({
+    status: 503,
+    description: 'Service is not ready (database disconnected)',
+  })
+  async checkReadiness(
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ReadinessResponse> {
     const isDbHealthy = await this.prisma.checkHealth();
+
+    if (!isDbHealthy) {
+      res.status(HttpStatus.SERVICE_UNAVAILABLE);
+    }
 
     return {
       status: isDbHealthy ? 'ready' : 'not_ready',

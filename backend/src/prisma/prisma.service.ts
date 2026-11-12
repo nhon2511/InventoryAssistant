@@ -21,7 +21,9 @@ export class PrismaService
   sanitizeError(error: unknown): string {
     const message = error instanceof Error ? error.message : String(error);
     // Mask credentials in connection strings e.g. postgresql://user:password@host
-    return message.replace(/:\/\/[^:]+:[^@]+@/g, '://***:***@');
+    return message
+      .replace(/(postgres(?:ql)?:\/\/)[^:\s]+:[^@\s]+@/gi, '$1***:***@')
+      .replace(/((?:password|token|secret|key|apikey)=)[^&\s]+/gi, '$1***');
   }
 
   async onModuleInit() {

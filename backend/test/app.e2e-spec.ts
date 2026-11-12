@@ -48,6 +48,29 @@ describe('Smart WMS Backend (e2e)', () => {
     expect(response.body).toHaveProperty('timestamp');
   });
 
+  it('GET /api/v1/health/liveness should return 200 and liveness envelope', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/health/liveness')
+      .expect(200);
+
+    expect(response.body).toHaveProperty('success', true);
+    expect(response.body).toHaveProperty('statusCode', 200);
+    expect(response.body.data).toHaveProperty('status', 'ok');
+    expect(response.body.data).toHaveProperty('uptime');
+    expect(response.body.data.uptime).toBeGreaterThanOrEqual(0);
+  });
+
+  it('GET /api/v1/health/readiness should return 503 when database is disconnected in test mode', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/health/readiness')
+      .expect(503);
+
+    expect(response.body).toHaveProperty('success', false);
+    expect(response.body).toHaveProperty('statusCode', 503);
+    expect(response.body.data).toHaveProperty('status', 'not_ready');
+    expect(response.body.data).toHaveProperty('database', 'disconnected');
+  });
+
   it('GET /api/v1/non-existent-route should return 404 with standard error filter', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/v1/non-existent-route')

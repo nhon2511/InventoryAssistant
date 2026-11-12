@@ -16,8 +16,8 @@
   2. Bắt buộc kiểm tra định dạng URI PostgreSQL (`postgres://` hoặc `postgresql://`), kiểm tra dải cổng `PORT` hợp lệ (1–65535), và chuẩn hóa đường dẫn `API_PREFIX`.
   3. Format lại thông báo lỗi xác thực môi trường (`formatValidationErrors`) để triệt tiêu nguy cơ rò rỉ giá trị nhạy cảm ra log hoặc exception message.
   4. Loại bỏ `.env.example` khỏi danh sách tệp runtime nạp vào `ConfigModule.forRoot()`, ngăn chặn tình trạng fallback sang giá trị placeholder mẫu.
-  5. Thiết lập cơ chế kiểm soát kết nối cơ sở dữ liệu có điều kiện trong `PrismaService`: tự động bỏ qua `$connect()` trong môi trường test/offline (`NODE_ENV === 'test'` hoặc `PRISMA_SKIP_CONNECT === 'true'`), có bộ lọc che giấu credentials (`sanitizeError`), và cập nhật cờ `isConnectionEstablished`.
-  6. Bổ sung các probe kiểm tra sức khỏe phân tách: `/health/liveness` (kiểm tra tiến trình dịch vụ) và `/health/readiness` (kiểm tra khả năng sẵn sàng phục vụ từ cơ sở dữ liệu), đồng thời duy trì backward-compatibility cho endpoint `/health`.
+  5. Thiết lập cơ chế kiểm soát kết nối cơ sở dữ liệu có điều kiện trong `PrismaService`: tự động bỏ qua `$connect()` trong môi trường test/offline (`NODE_ENV === 'test'` hoặc `PRISMA_SKIP_CONNECT === 'true'`), có bộ lọc che giấu credentials đa tầng (`sanitizeError`), và cập nhật cờ `isConnectionEstablished`.
+  6. Bổ sung các probe kiểm tra sức khỏe phân tách: `/health/liveness` (kiểm tra tiến trình dịch vụ) và `/health/readiness` (trả về HTTP 200 khi DB kết nối thành công và HTTP 503 Service Unavailable khi DB chưa sẵn sàng).
   7. Bổ sung script `npm run prisma:validate` để hỗ trợ kiểm tra tính hợp lệ cú pháp của `schema.prisma` ở chế độ hoàn toàn offline.
   8. Mở rộng quy tắc `.gitignore` ở cả cấp độ dự án và thư mục backend để ngăn chặn việc commit các biến thể của tệp môi trường (`.env.*`, `.env.local`, `.env.production`).
 - **Mức độ sẵn sàng kiểm thử database**: Đạt mức **SẴN SÀNG CAO (READY FOR CONTROLLED PROBING)**. Toàn bộ hạ tầng mã nguồn backend đã đáp ứng an toàn để tiến hành kiểm thử kết nối read-only có kiểm soát trong bước tiếp theo (TASK-DB-03).
@@ -33,7 +33,8 @@
 | **TASK-DB-02C** | **Prisma Lifecycle Hardening**: Xử lý lifecycle `$connect()`/`$disconnect()`, sanitize log credentials, phân tách liveness & readiness probes. | `backend/src/prisma/prisma.service.ts`<br>`backend/src/prisma/prisma.service.spec.ts`<br>`backend/src/health/health.controller.ts`<br>`backend/src/health/health.controller.spec.ts` | Unit tests: 14 tests passed<br>E2E tests: 2 tests passed | **PASS** | `0cfbf76` |
 | **TASK-DB-02D** | **Prisma Offline Validation**: Kiểm tra cú pháp schema 8 models, thêm script `prisma:validate` chạy offline không chạm database. | `backend/package.json` | `npm run prisma:validate` (Exit code: 0) | **PASS** | `9113ea4` |
 | **TASK-DB-02E** | **Security & Git Ignore Audit**: Bổ sung `.env.*` vào `.gitignore` root và backend, kiểm tra lịch sử commit và tệp git index. | `.gitignore`<br>`backend/.gitignore` | `git check-ignore -v`<br>`git ls-files` | **PASS** | `e240763` |
-| **TASK-DB-02F** | **QA & Documentation**: Chạy toàn bộ test suite, lint, build và lập báo cáo kỹ thuật. | `docs/audits/TASK-DB-02_BACKEND_CONFIGURATION_REPORT.md` | `npm run lint`<br>`npm run build`<br>`npm run test`<br>`npm run test:e2e` | **PASS** | *(Pending push)* |
+| **TASK-DB-02F** | **QA & Documentation**: Chạy toàn bộ test suite, lint, build và lập báo cáo kỹ thuật. | `docs/audits/TASK-DB-02_BACKEND_CONFIGURATION_REPORT.md` | `npm run lint`<br>`npm run build`<br>`npm run test`<br>`npm run test:e2e` | **PASS** | `b25b955` |
+| **TASK-DB-02G** | **Final Verification & Readiness HTTP 503 Enforcement**: Tăng cường HTTP 503 cho readiness endpoint khi DB disconnected, mở rộng sanitizeError regex đa tầng và thêm targeted tests. | `backend/src/health/health.controller.ts`<br>`backend/src/health/health.controller.spec.ts`<br>`backend/src/prisma/prisma.service.ts`<br>`backend/src/prisma/prisma.service.spec.ts`<br>`backend/src/common/interceptors/transform.interceptor.ts`<br>`backend/test/app.e2e-spec.ts` | Unit tests: 33 tests passed<br>E2E tests: 4 tests passed | **PASS** | *(Pending push)* |
 
 ---
 
@@ -59,7 +60,8 @@
 
 ### 3.4. Quản lý vòng đời Prisma (Prisma Lifecycle)
 - **Tự động ngắt kết nối an toàn trong Test/Offline**: Khi `NODE_ENV === 'test'` hoặc `PRISMA_SKIP_CONNECT === 'true'`, phương thức `onModuleInit()` bỏ qua việc gọi `$connect()`, giúp kiểm thử hoàn toàn độc lập và an toàn tuyệt đối.
-- **Sanitize Exception Logs**: Bộ lọc Regex `:\/\/[^:]+:[^@]+@` tự động thay thế `user:password` thành `***:***` trước khi xuất ra log hệ thống khi có lỗi kết nối.
+- **Sanitize Exception Logs đa tầng**: Bộ lọc Regex loại bỏ credentials trong connection strings (`postgresql://***:***@host`) đồng thời che giấu các query parameter nhạy cảm (`apikey=***`, `token=***`, `secret=***`, `password=***`) trước khi xuất ra log hệ thống khi có lỗi kết nối.
+- **Khẳng định tính chính thực**: Khi `PRISMA_SKIP_CONNECT=true`, backend không bao giờ báo healthy/ready nếu chưa thực sự có kết nối và truy vấn thành công.
 - **Giải phóng tài nguyên**: `onModuleDestroy()` luôn thực thi `$disconnect()` và cập nhật cờ `isConnected = false`.
 
 ### 3.5. Kiểm tra sức khỏe hệ thống (Health Checks)
@@ -77,7 +79,9 @@
   }
   ```
 - **Endpoint `/health/liveness`**: Kiểm tra trạng thái tiến trình Node.js/NestJS còn phản hồi, trả về HTTP 200 `{ "status": "ok", "uptime": number }`.
-- **Endpoint `/health/readiness`**: Kiểm tra trạng thái sẵn sàng truy vấn cơ sở dữ liệu (`SELECT 1`), trả về `{ "status": "ready" | "not_ready", "database": "connected" | "disconnected" }`.
+- **Endpoint `/health/readiness`**:
+  - Trả về **HTTP 200** khi database sẵn sàng phục vụ truy vấn (`status: 'ready'`, `database: 'connected'`).
+  - Trả về **HTTP 503 (Service Unavailable)** khi database chưa kết nối hoặc lỗi truy vấn (`status: 'not_ready'`, `database: 'disconnected'`).
 
 ---
 
@@ -98,7 +102,7 @@
 
 ### 4.3. Kiểm soát rò rỉ thông tin (Information Leakage Prevention)
 - Tầng Exception Filter (`AllExceptionsFilter`) và Validator (`formatValidationErrors`) đảm bảo không hiển thị giá trị đầu vào của người dùng trong thông điệp lỗi.
-- Thông tin mật khẩu trong connection string được che giấu (`***:***`) trước khi ghi nhận vào NestJS Logger.
+- Mọi mật khẩu, token và connection string đều được che giấu (`***`) trước khi ghi nhận vào NestJS Logger.
 
 ---
 
@@ -108,18 +112,24 @@
 | :--- | :--- | :--- | :--- |
 | **ESLint** | `npm run lint` | **PASS** | 0 errors, 0 warnings trên toàn bộ mã nguồn `src/` và `test/`. |
 | **TypeScript Build** | `npm run build` | **PASS** | `nest build` biên dịch thành công 100% không có lỗi type. |
-| **Unit Tests** | `npm run test` | **PASS** | **7/7 test suites (31/31 tests passed)** trong 1.48s. |
-| **E2E Tests** | `npm run test:e2e` | **PASS** | **1/1 test suite (2/2 tests passed)** với mock/offline environment. |
+| **Unit Tests** | `npm run test` | **PASS** | **7/7 test suites (33/33 tests passed)**. |
+| **E2E Tests** | `npm run test:e2e` | **PASS** | **1/1 test suite (4/4 tests passed)** với liveness probe HTTP 200 và readiness probe HTTP 503. |
 | **Prisma Offline Validation** | `npm run prisma:validate` | **PASS** | Cú pháp `schema.prisma` hợp lệ 100% không phát sinh kết nối mạng. |
 
 ### Chi tiết các tệp kiểm thử Unit Tests:
 1. `src/config/env.validation.spec.ts` — 13 tests passed.
-2. `src/prisma/prisma.service.spec.ts` — 9 tests passed.
+2. `src/prisma/prisma.service.spec.ts` — 11 tests passed.
 3. `src/health/health.controller.spec.ts` — 5 tests passed.
 4. `src/app.controller.spec.ts` — 1 test passed.
 5. `src/app.module.spec.ts` — 1 test passed.
 6. `src/common/filters/http-exception.filter.spec.ts` — 1 test passed.
 7. `src/common/interceptors/transform.interceptor.spec.ts` — 1 test passed.
+
+### Chi tiết E2E Tests (`test/app.e2e-spec.ts`):
+1. `GET /api/v1/health` -> HTTP 200 (Enveloped status & version).
+2. `GET /api/v1/health/liveness` -> HTTP 200 (Process alive & uptime).
+3. `GET /api/v1/health/readiness` -> HTTP 503 (Database disconnected in test mode).
+4. `GET /api/v1/non-existent-route` -> HTTP 404 (Standard error filter).
 
 ---
 

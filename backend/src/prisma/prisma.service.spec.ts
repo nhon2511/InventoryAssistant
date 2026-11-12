@@ -22,6 +22,18 @@ describe('PrismaService', () => {
     expect(sanitized).toContain('postgresql://***:***@aws-0-ap-southeast-1');
   });
 
+  it('sanitizeError should mask sensitive query parameter tokens and keys', () => {
+    const rawError = new Error(
+      'Request to postgresql://dbuser:mypassword@supabase.co:5432/db?apikey=sbp_secretkey123&token=jwt_xyz456 failed',
+    );
+    const sanitized = service.sanitizeError(rawError);
+    expect(sanitized).not.toContain('mypassword');
+    expect(sanitized).not.toContain('sbp_secretkey123');
+    expect(sanitized).not.toContain('jwt_xyz456');
+    expect(sanitized).toContain('apikey=***');
+    expect(sanitized).toContain('token=***');
+  });
+
   it('sanitizeError should return plain string when no uri present', () => {
     const rawError = new Error('Socket closed unexpectedly');
     expect(service.sanitizeError(rawError)).toBe('Socket closed unexpectedly');
@@ -34,6 +46,21 @@ describe('PrismaService', () => {
     await service.onModuleInit();
 
     expect(connectSpy).not.toHaveBeenCalled();
+    expect(service.isConnectionEstablished).toBe(false);
+
+    delete process.env.PRISMA_SKIP_CONNECT;
+  });
+
+  it('PRISMA_SKIP_CONNECT should not allow backend to report ready without successful query', async () => {
+    process.env.PRISMA_SKIP_CONNECT = 'true';
+    await service.onModuleInit();
+
+    expect(service.isConnectionEstablished).toBe(false);
+
+    vi.spyOn(service, '$queryRaw').mockRejectedValue(new Error('Connection refused'));
+    const isHealthy = await service.checkHealth();
+
+    expect(isHealthy).toBe(false);
     expect(service.isConnectionEstablished).toBe(false);
 
     delete process.env.PRISMA_SKIP_CONNECT;
