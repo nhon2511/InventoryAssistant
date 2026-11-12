@@ -1,5 +1,13 @@
 {
   "type": "module",
+  "scripts": {
+    "backend:dev": "npm --prefix backend run start:dev",
+    "backend:build": "npm --prefix backend run build",
+    "backend:lint": "npm --prefix backend run lint",
+    "backend:test": "npm --prefix backend test",
+    "backend:test:e2e": "npm --prefix backend run test:e2e",
+    "backend:prisma:generate": "npm --prefix backend run prisma:generate"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
     "dotenv": "^17.4.2"
