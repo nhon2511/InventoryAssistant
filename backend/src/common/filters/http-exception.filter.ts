@@ -16,6 +16,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+    const requestUrl = request.originalUrl || request.url;
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | object = 'Internal server error';
@@ -41,7 +42,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     this.logger.error(
-      `[${request.method}] ${request.url} - Status: ${status} - Error: ${JSON.stringify(message)}`,
+      `[${request.method}] ${requestUrl} - Status: ${status} - Error: ${JSON.stringify(message)}`,
       exception instanceof Error ? exception.stack : undefined,
     );
 
@@ -51,7 +52,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       error,
       message,
       timestamp: new Date().toISOString(),
-      path: request.url,
+      path: requestUrl,
     });
   }
 }

@@ -1,11 +1,13 @@
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { App } from 'supertest/types.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { AllExceptionsFilter } from '../src/common/filters/http-exception.filter.js';
+import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor.js';
 import { AppModule } from './../src/app.module.js';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+describe('Smart WMS Backend (e2e)', () => {
+  let app: INestApplication;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -13,17 +15,48 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    await app.init();
-  });
+    app.setGlobalPrefix('api/v1');
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+      }),
+    );
+    app.useGlobalFilters(new AllExceptionsFilter());
+    app.useGlobalInterceptors(new TransformInterceptor());
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+    await app.init();
   });
 
   afterEach(async () => {
     await app.close();
+  });
+
+  it('GET /api/v1/health should return 200 and structured health envelope', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/health')
+      .expect(200);
+
+    expect(response.body).toHaveProperty('success', true);
+    expect(response.body).toHaveProperty('statusCode', 200);
+    expect(response.body).toHaveProperty('data');
+    expect(response.body.data).toHaveProperty('status');
+    expect(response.body.data).toHaveProperty('version', '1.0.0');
+    expect(response.body.data).toHaveProperty('services');
+    expect(response.body.data.services).toHaveProperty('database');
+    expect(response.body).toHaveProperty('timestamp');
+  });
+
+  it('GET /api/v1/non-existent-route should return 404 with standard error filter', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/non-existent-route')
+      .expect(404);
+
+    expect(response.body).toHaveProperty('success', false);
+    expect(response.body).toHaveProperty('statusCode', 404);
+    expect(response.body).toHaveProperty('error');
+    expect(response.body).toHaveProperty('path', '/api/v1/non-existent-route');
+    expect(response.body).toHaveProperty('timestamp');
   });
 });
