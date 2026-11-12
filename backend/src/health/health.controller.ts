@@ -14,6 +14,18 @@ export interface HealthResponse {
   };
 }
 
+export interface LivenessResponse {
+  status: 'ok';
+  timestamp: string;
+  uptime: number;
+}
+
+export interface ReadinessResponse {
+  status: 'ready' | 'not_ready';
+  timestamp: string;
+  database: 'connected' | 'disconnected';
+}
+
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
@@ -23,7 +35,7 @@ export class HealthController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'System health and readiness check' })
+  @ApiOperation({ summary: 'System health overview' })
   @ApiResponse({
     status: 200,
     description: 'Service health information',
@@ -58,6 +70,36 @@ export class HealthController {
       services: {
         database: isDbHealthy ? 'connected' : 'disconnected',
       },
+    };
+  }
+
+  @Get('liveness')
+  @ApiOperation({ summary: 'Process liveness check' })
+  @ApiResponse({
+    status: 200,
+    description: 'Process is alive and responding',
+  })
+  checkLiveness(): LivenessResponse {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    };
+  }
+
+  @Get('readiness')
+  @ApiOperation({ summary: 'Service readiness check' })
+  @ApiResponse({
+    status: 200,
+    description: 'Service database readiness check',
+  })
+  async checkReadiness(): Promise<ReadinessResponse> {
+    const isDbHealthy = await this.prisma.checkHealth();
+
+    return {
+      status: isDbHealthy ? 'ready' : 'not_ready',
+      timestamp: new Date().toISOString(),
+      database: isDbHealthy ? 'connected' : 'disconnected',
     };
   }
 }
