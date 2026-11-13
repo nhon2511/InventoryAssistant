@@ -38,16 +38,12 @@ enum OrderStatus {
 // ── Models ───────────────────────────────────────────────────────────────────
 
 model Profile {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @db.Uuid
   fullName    String   @map("full_name")
   role        String   @default("STAFF")
   phoneNumber String?  @map("phone_number")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  createdOrders WarehouseOrder[] @relation("CreatedOrders")
-  approvedOrders WarehouseOrder[] @relation("ApprovedOrders")
-  stockLedgers   StockLedger[]
 
   @@map("profiles")
 }
@@ -100,8 +96,9 @@ model InventoryItem {
   expiryDate       DateTime? @map("expiry_date") @db.Date
   updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
-  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  stockLedgers StockLedger[]
 
   @@unique([productId, locationId, lotNumber])
   @@index([productId])
@@ -120,14 +117,13 @@ model WarehouseOrder {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  creator Profile?             @relation("CreatedOrders", fields: [createdBy], references: [id], onDelete: SetNull)
-  approver Profile?            @relation("ApprovedOrders", fields: [approvedBy], references: [id], onDelete: SetNull)
+  // Both actor UUIDs target Supabase-managed auth.users; keep scalar fields.
   items   WarehouseOrderItem[]
   stockLedgers StockLedger[]
 
   @@index([type])
   @@index([status])
-  @@index([approvedBy])
+  // approved_by uses a partial database-owned index after migration 001.
   @@map("warehouse_orders")
 }
 
@@ -154,6 +150,7 @@ model WarehouseOrderItem {
 // Planned in TASK-DB-04B; this model is unavailable until the migration is applied.
 model StockLedger {
   id              String   @id @default(uuid()) @db.Uuid
+  inventoryItemId String   @map("inventory_item_id") @db.Uuid
   transactionType String   @map("transaction_type")
   productId       String   @map("product_id") @db.Uuid
   locationId      String   @map("location_id") @db.Uuid
@@ -164,16 +161,15 @@ model StockLedger {
   note            String?
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
   product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
   location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
   order WarehouseOrder? @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  creator Profile? @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  // createdBy is an immutable auth actor snapshot, without a physical FK.
 
-  @@index([productId])
-  @@index([locationId])
-  @@index([createdAt])
-  @@index([productId, locationId, createdAt(sort: Desc), id(sort: Desc)])
-  @@index([orderId])
+  @@index([inventoryItemId, createdAt(sort: Desc), id(sort: Desc)], map: "stock_ledger_item_history_idx")
+  @@index([productId, locationId, createdAt(sort: Desc), id(sort: Desc)], map: "stock_ledger_product_location_history_idx")
+  @@index([orderId], map: "stock_ledger_order_id_idx")
   @@map("stock_ledger")
 }
 
