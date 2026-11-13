@@ -19,8 +19,11 @@ ORDER BY 1, 2;
 SELECT schemaname, tablename, indexname, indexdef FROM pg_indexes
 WHERE schemaname = 'public' AND tablename IN
   ('stock_ledger','idempotency_keys','warehouse_orders') ORDER BY 2, 3;
-SELECT tgname, pg_get_triggerdef(oid) AS definition FROM pg_trigger
-WHERE tgrelid = 'public.stock_ledger'::regclass AND NOT tgisinternal ORDER BY tgname;
+SELECT tgrelid::regclass::text AS table_name, tgname,
+       pg_get_triggerdef(oid) AS definition FROM pg_trigger
+WHERE tgrelid IN ('public.stock_ledger'::regclass,
+                  'public.warehouse_orders'::regclass)
+  AND NOT tgisinternal ORDER BY table_name, tgname;
 SELECT schemaname, tablename, policyname, roles, cmd FROM pg_policies
 WHERE schemaname = 'public' AND tablename IN ('stock_ledger','idempotency_keys');
 SELECT grantee, table_name, privilege_type FROM information_schema.table_privileges

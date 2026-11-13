@@ -89,6 +89,29 @@ ALTER TABLE public.warehouse_orders ADD CONSTRAINT warehouse_orders_approved_by_
 CREATE INDEX warehouse_orders_approved_by_idx
   ON public.warehouse_orders (approved_by) WHERE approved_by IS NOT NULL;
 
+-- Existing authenticated policy/grants permit broad order writes. Protect the
+-- new approval column without changing legacy policies or workflow statuses.
+CREATE FUNCTION public.guard_warehouse_order_approval() RETURNS trigger
+LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+  IF current_user IN ('anon', 'authenticated') THEN
+    IF TG_OP = 'INSERT' AND NEW.approved_by IS NOT NULL THEN
+      RAISE EXCEPTION 'direct approval change is not permitted';
+    ELSIF TG_OP = 'UPDATE' THEN
+      IF NEW.approved_by IS DISTINCT FROM OLD.approved_by THEN
+        RAISE EXCEPTION 'direct approval change is not permitted';
+      END IF;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.guard_warehouse_order_approval() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.guard_warehouse_order_approval() FROM anon, authenticated, service_role;
+CREATE TRIGGER warehouse_orders_approval_guard
+  BEFORE INSERT OR UPDATE OF approved_by ON public.warehouse_orders
+  FOR EACH ROW EXECUTE FUNCTION public.guard_warehouse_order_approval();
+
 ALTER TABLE public.stock_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.idempotency_keys ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.stock_ledger, public.idempotency_keys FROM PUBLIC;

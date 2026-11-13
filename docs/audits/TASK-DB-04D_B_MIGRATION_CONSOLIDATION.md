@@ -26,7 +26,7 @@ Không phát hiện bằng chứng năm file trên đã được áp dụng; his
 
 **IdempotencyKey:** composite PK `(scope_id,key)`; scope lấy từ principal/tenant đã xác thực, không tin UUID client tự khai. Ràng buộc method/path/hash/status/status code/expiry. Backend phải chuẩn hóa method/path/body, băm request không chứa secrets; không lưu response có token/PII. Claim bằng INSERT unique trong transaction, duplicate same hash chờ hoàn tất hoặc trả in-progress, different hash = conflict; khóa row `FOR UPDATE`/transaction để không hai request cùng thực hiện side effect. Dùng một transaction cho claim, inventory/order changes, ledger và completed response; lỗi rollback tất cả. TTL cleanup phải bảo đảm không tái dùng key khi side effect còn cần dedup; không có cleanup tự động trong candidate. Thiết kế này **chưa có NestJS integration implementation**.
 
-**Order approval:** `approved_by uuid NULL → auth.users(id) ON DELETE SET NULL`, index cho truy vấn theo approver. Dữ liệu cũ giữ NULL; không đổi status/workflow. Flutter DTO hiện dùng `approved_by`, không dùng `reviewed_by`.
+**Order approval:** `approved_by uuid NULL → auth.users(id) ON DELETE SET NULL`, index cho truy vấn theo approver. Dữ liệu cũ giữ NULL; không đổi status/workflow. Flutter DTO hiện dùng `approved_by`, không dùng `reviewed_by`. Do `authenticated` đang có quyền ghi rộng trên `warehouse_orders`, candidate thêm trigger chặn vai trò `anon`/`authenticated` tự điền hoặc đổi `approved_by` khi INSERT/UPDATE. Quyền backend/owner có thể vượt guard này; backend phải kiểm tra vai trò approver và audit hành động. Trigger không khắc phục quyền ghi status và các cột cũ, cần hardening riêng.
 
 **Inventory:** chỉ CHECK `quantity_reserved <= quantity_on_hand` ở migration optional; không đổi UNIQUE `(product_id,location_id,lot_number)` và NULL semantics. Aggregate 0 tại preflight không chứng minh tất cả write paths an toàn; đặc biệt RPC `confirm_outbound_order` phải audit concurrency trước khi áp dụng. `NOT VALID` vẫn kiểm tra các INSERT/UPDATE mới; VALIDATE sau là bước duyệt riêng.
 
@@ -51,7 +51,7 @@ Candidate không dùng `IF NOT EXISTS`, không tạo lại sáu bảng, không D
 
 ## 6. Security/RLS
 
-Hai bảng mới bật RLS, không tạo policy client, REVOKE từ PUBLIC/anon/authenticated/service_role để tránh default grants của Supabase public. Backend cần thiết kế role/privilege riêng hoặc đường server-side đã rà soát, không đặt `service_role` ở Flutter. Quyền owner/superuser và `BYPASSRLS` cần kiểm soát; RLS/trigger không thay thế privilege review. Candidate không sửa sáu policy hiện hữu `USING(true)` dù đây là rủi ro cao, cần task hardening riêng; `confirm_outbound_order` hiện có GRANT EXECUTE rộng theo dump cũ, cần audit riêng trước release. Không cache response chứa credential/PII.
+Hai bảng mới bật RLS, không tạo policy client, REVOKE từ PUBLIC/anon/authenticated/service_role để tránh default grants của Supabase public. Backend cần thiết kế role/privilege riêng hoặc đường server-side đã rà soát, không đặt `service_role` ở Flutter. Quyền owner/superuser và `BYPASSRLS` cần kiểm soát; RLS/trigger không thay thế privilege review. Candidate không sửa sáu policy hiện hữu `USING(true)` dù đây là rủi ro cao, cần task hardening riêng; guard `approved_by` chỉ bảo vệ cột mới khỏi vai trò client thông thường. `confirm_outbound_order` hiện có GRANT EXECUTE rộng theo dump cũ, cần audit riêng trước release. Không cache response chứa credential/PII.
 
 ## 7. Offline checks
 
@@ -90,4 +90,4 @@ Owner duyệt contract/role/backup → chạy lại preflight read-only đúng t
 
 ## Git delivery
 
-Implementation commit: `49b5d32` (`feat(db): stage consolidated Supabase migration candidates`). Báo cáo được commit riêng theo Conventional Commits (hash của chính commit báo cáo không thể tự ghi trước commit). Chỉ stage file trong thư mục staging và báo cáo này; không stage user-owned untracked files, backup/dump/secrets. Push mục tiêu là `origin/feature/backend-nestjs-init`, không force push/merge/main. Kết quả push thực tế được xác nhận trong phản hồi cuối task.
+Implementation commit: `49b5d32` (`feat(db): stage consolidated Supabase migration candidates`); report commit ban đầu: `5c0d253`. Guard cho `approved_by` và postcheck trigger được bổ sung trong commit sửa lỗi tiếp theo. Chỉ stage file trong thư mục staging và báo cáo này; không stage user-owned untracked files, backup/dump/secrets. Push mục tiêu là `origin/feature/backend-nestjs-init`, không force push/merge/main. Kết quả push thực tế được xác nhận trong phản hồi cuối task.
