@@ -9,6 +9,9 @@ import {
 export interface VerifiedPrincipal {
   subjectId: string;
   scopeId: string;
+  issuer: string;
+  audience: string;
+  authorizationSource: 'verified-jwt' | 'supabase-auth';
   // Only a verified server-side authority may set this. Never user_metadata
   // or the currently client-writable public.profiles.role column.
   trustedRole?: 'ADMIN' | 'MANAGER' | 'STAFF';
@@ -17,6 +20,8 @@ export interface VerifiedPrincipal {
 export interface VerifiedPrincipalProvider {
   verifyAccessToken(token: string): Promise<VerifiedPrincipal>;
 }
+
+export const VERIFIED_PRINCIPAL_PROVIDER = 'VERIFIED_PRINCIPAL_PROVIDER';
 
 export interface InventoryMovementInput {
   idempotencyKey: string;

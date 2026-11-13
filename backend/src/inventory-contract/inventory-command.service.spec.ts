@@ -32,6 +32,8 @@ function fixture(role?: 'ADMIN' | 'MANAGER' | 'STAFF') {
   };
   const verifyAccessToken = vi.fn(async (_token: string) => ({
     subjectId: 'verified-actor', scopeId: 'verified-scope', trustedRole: role,
+    issuer: 'https://example.supabase.co/auth/v1', audience: 'authenticated',
+    authorizationSource: 'verified-jwt' as const,
   }));
   const principals: VerifiedPrincipalProvider = { verifyAccessToken };
   const service = new InventoryCommandService(
