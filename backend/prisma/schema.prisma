@@ -46,6 +46,8 @@ model Profile {
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   createdOrders WarehouseOrder[] @relation("CreatedOrders")
+  approvedOrders WarehouseOrder[] @relation("ApprovedOrders")
+  stockLedgers   StockLedger[]
 
   @@map("profiles")
 }
@@ -113,15 +115,19 @@ model WarehouseOrder {
   type      String
   status    String   @default("DRAFT")
   createdBy String?  @map("created_by") @db.Uuid
+  approvedBy String? @map("approved_by") @db.Uuid
   note      String?
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   creator Profile?             @relation("CreatedOrders", fields: [createdBy], references: [id], onDelete: SetNull)
+  approver Profile?            @relation("ApprovedOrders", fields: [approvedBy], references: [id], onDelete: SetNull)
   items   WarehouseOrderItem[]
+  stockLedgers StockLedger[]
 
   @@index([type])
   @@index([status])
+  @@index([approvedBy])
   @@map("warehouse_orders")
 }
 
@@ -145,7 +151,7 @@ model WarehouseOrderItem {
   @@map("warehouse_order_items")
 }
 
-// NOTE: Table stock_ledger will be created in TASK-DB-04B migration.
+// Planned in TASK-DB-04B; this model is unavailable until the migration is applied.
 model StockLedger {
   id              String   @id @default(uuid()) @db.Uuid
   transactionType String   @map("transaction_type")
@@ -160,20 +166,33 @@ model StockLedger {
 
   product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
   location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  order WarehouseOrder? @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  creator Profile? @relation(fields: [createdBy], references: [id], onDelete: Restrict)
 
   @@index([productId])
   @@index([locationId])
   @@index([createdAt])
+  @@index([productId, locationId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([orderId])
   @@map("stock_ledger")
 }
 
-// NOTE: Table idempotency_keys will be created in TASK-DB-04B migration.
+// Planned in TASK-DB-04B; this model is unavailable until the migration is applied.
 model IdempotencyKey {
-  key        String   @id
-  path       String
-  statusCode Int      @map("status_code")
-  response   Json
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  scopeId          String   @map("scope_id") @db.Uuid
+  key              String
+  httpMethod       String   @map("http_method")
+  requestPath      String   @map("request_path")
+  requestHash      String   @map("request_hash") @db.Char(64)
+  processingStatus String   @default("processing") @map("processing_status")
+  statusCode       Int?     @map("status_code")
+  response         Json?
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  expiresAt        DateTime @map("expires_at") @db.Timestamptz(6)
+
+  @@id([scopeId, key])
+  @@index([expiresAt])
 
   @@map("idempotency_keys")
 }
