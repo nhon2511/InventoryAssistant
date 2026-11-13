@@ -32,7 +32,7 @@ function fixture() {
   const tx = { $queryRaw: raw, inventoryItem: { updateMany: updateStock },
     stockLedger: { create: ledger }, warehouseOrder: { updateMany: updateOrder },
     idempotencyKey: { updateMany: completeKey } };
-  const run = vi.fn(async (work: (client: typeof tx) => Promise<unknown>) => work(tx));
+  const run = vi.fn(async (work: (client: typeof tx) => Promise<unknown>, _options?: unknown) => work(tx));
   const adapter = new PrismaOrderConfirmationAdapter({ $transaction: run } as unknown as PrismaService, async () => {});
   return { adapter, run, raw, sql, updateStock, ledger, updateOrder, completeKey };
 }

@@ -59,7 +59,7 @@ function fixture(existing?: IdempotencyRecord) {
     stockLedger: { create: createLedger },
     idempotencyKey: { updateMany: completeKey },
   };
-  const run = vi.fn(async (work: (transaction: typeof tx) => Promise<unknown>) => work(tx));
+  const run = vi.fn(async (work: (transaction: typeof tx) => Promise<unknown>, _options?: unknown) => work(tx));
   const adapter = new PrismaInventoryTransactionAdapter(
     { $transaction: run } as unknown as PrismaService,
     async () => {},

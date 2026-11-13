@@ -98,7 +98,7 @@ class FakeDb implements OrderConfirmationRunner {
 
 function fixture(role: VerifiedPrincipal['trustedRole'] = 'STAFF') {
   const db = new FakeDb();
-  const verifyAccessToken = vi.fn(async () => ({ ...principal, trustedRole: role }));
+  const verifyAccessToken = vi.fn(async (): Promise<VerifiedPrincipal> => ({ ...principal, trustedRole: role }));
   const service = new OrderConfirmationService(db, { verifyAccessToken }, () => now);
   return { db, service, verifyAccessToken };
 }
