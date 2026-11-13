@@ -22,8 +22,8 @@ export function isRetryableTransactionError(error: unknown): boolean {
   return sqlState === '40001' || sqlState === '40P01' || sqlState === '55P03';
 }
 
-class PrismaInventoryTransactionPort implements InventoryTransactionPort {
-  constructor(private readonly tx: Prisma.TransactionClient) {}
+export class PrismaInventoryTransactionPort implements InventoryTransactionPort {
+  constructor(protected readonly tx: Prisma.TransactionClient) {}
 
   async claimOrLock(input: {
     scopeId: string;

@@ -29,3 +29,9 @@
 | Reservation/order | Interface names transaction boundary; no endpoint or write path | Owner-approved workflow and Flutter/RPC cutover |
 
 The mock concurrency test models a unique-key wait, but does not establish actual PostgreSQL or pooler behavior. Never enable the adapter by registering it or exposing endpoints until migration 001, role/ACL verification, a trusted identity provider, recovery plan, and database integration tests are approved.
+
+## TASK-DB-04D-B6 confirmation workflow (offline)
+
+`OrderConfirmationService` and `PrismaOrderConfirmationAdapter` add a separate, unwired confirmation path for existing DRAFT orders. It validates a verified principal with a trusted role and exact creator ownership, claims idempotency, locks the order, loads its lines, locks inventory identities in sorted order, updates balances, appends one ledger row per line, completes the order, and completes the claim in one serializable transaction. A second key cannot confirm a completed order; the same key can replay a small response. The adapter is not registered in AppModule and no confirmation route exists.
+
+This path deliberately requires **exactly one existing inventory item** for each product/location/lot and matching expiry. It rejects missing or ambiguous rows, including duplicate NULL-lot rows; it does not create an inventory item until identity/uniqueness rules and database integration tests are approved. Only DRAFT → COMPLETED is modeled because Flutter's current confirm actions target that state; other statuses remain blocked. Tests use in-memory transaction and SQL-shaped mocks, so they do not prove PostgreSQL atomicity, lock timing, RLS, grants, triggers, or real JWT/DB-role compatibility. See `docs/audits/TASK-DB-04D_B6_WORKFLOW_INTEGRITY.md` for cutover and release gates.

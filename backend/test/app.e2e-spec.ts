@@ -64,6 +64,14 @@ describe('Smart WMS Backend (e2e)', () => {
     expect(response.body).toHaveProperty('timestamp');
   });
 
+  it('does not expose an inventory confirmation write route before release gates', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/orders/00000000-0000-4000-8000-000000000002/confirm-outbound')
+      .set('Authorization', 'Bearer a.b.c')
+      .send({ idempotencyKey: 'offline-only' })
+      .expect(404);
+  });
+
   it('GET /api/v1/health/liveness should return 200 and liveness envelope', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/v1/health/liveness')
