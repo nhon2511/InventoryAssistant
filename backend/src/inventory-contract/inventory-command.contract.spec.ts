@@ -14,6 +14,7 @@ import {
 const now = new Date('2026-11-13T00:00:00Z');
 const expiresAt = new Date('2026-11-14T00:00:00Z');
 const command: MovementCommand = {
+  transactionType: 'INBOUND',
   scopeId: 'scope-1',
   key: 'request-1',
   method: 'POST',
@@ -174,8 +175,8 @@ describe('offline inventory transaction contract', () => {
 
   it('refuses negative, over-reserved and mismatched inventory before writing', async () => {
     const db = new FakeRunner();
-    await expect(executeMovementContract(db, { ...command, delta: -6 })).rejects.toThrow();
-    await expect(executeMovementContract(db, { ...command, delta: -4 })).rejects.toThrow(
+    await expect(executeMovementContract(db, { ...command, transactionType: 'OUTBOUND', delta: -6 })).rejects.toThrow();
+    await expect(executeMovementContract(db, { ...command, transactionType: 'OUTBOUND', delta: -4 })).rejects.toThrow(
       'over-reserve',
     );
     db.productId = 'other-product';

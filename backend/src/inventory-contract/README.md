@@ -11,3 +11,21 @@
 5. **Cutover/audit:** inventory writes through Flutter and `confirm_outbound_order` must be audited before relying on ledger completeness. Do not replace the RPC without Owner approval. Acceptance: every authorized stock mutation has exactly one ledger event and no bypass path; Flutter DTO/approval behavior remains compatible.
 
 `InventoryTransactionPort` is an interface; the in-memory test runner simulates commit/rollback but cannot prove PostgreSQL locking, RLS, grants, FK behavior, or Supabase session pooler compatibility. Those require a separately approved PG17/Cloud Development validation plan.
+
+## TASK-DB-04D-B4 implementation status
+
+- `PrismaInventoryTransactionAdapter` implements the port with one Prisma v6 interactive transaction. It uses parameterized tagged SQL for claim insert/unique conflict, `SELECT ... FOR UPDATE` on a duplicate claim and the inventory item, Prisma update/create for stock and ledger, and a guarded completion update. It sets a transaction-local lock timeout, uses Serializable isolation, caps transaction wait/runtime, and retries only Prisma P2034 or P2010 with SQLSTATE 40001/40P01/55P03 at most three attempts. Each retry starts a new transaction; business errors are not retried. The adapter is **not registered in AppModule**.
+- `InventoryCommandService` derives actor/scope only from a `VerifiedPrincipalProvider`; none is implemented or registered. It exposes no route. Its `receive` and `ship` methods prepare positive/negative deltas, respectively. `authorizeApproval` fails closed without a trusted role; `profiles.role` is not a trusted authority under current client-write policy.
+- `InventoryWorkflowRepository` and `InventoryWorkflowTransactionPort` reserve interfaces for reservation and order state transitions within the same transaction. There is no implementation because the existing Flutter/RPC workflow has not been audited; no new status transition is enabled.
+
+### B4 acceptance checklist
+
+| Micro-task | Offline acceptance | Remaining gate |
+| --- | --- | --- |
+| Interactive transaction | All adapter methods receive the same `tx`; timeout and bounded retry unit-tested | PostgreSQL 17 commit/rollback/retry tests |
+| Idempotency | Parameterized INSERT conflict, locked duplicate, hash/replay/conflict tests | Concurrent requests and expiry policy on database |
+| Stock movement | Lock item before update; signed delta, int4, negative/over-reservation checks; ledger and key completion in same callback | Real FK/RLS/trigger and concurrent stock tests |
+| Authorization | Verified-principal interface, no caller-provided actor/scope; approval fails without trusted role | JWT verifier and trusted approval authority |
+| Reservation/order | Interface names transaction boundary; no endpoint or write path | Owner-approved workflow and Flutter/RPC cutover |
+
+The mock concurrency test models a unique-key wait, but does not establish actual PostgreSQL or pooler behavior. Never enable the adapter by registering it or exposing endpoints until migration 001, role/ACL verification, a trusted identity provider, recovery plan, and database integration tests are approved.

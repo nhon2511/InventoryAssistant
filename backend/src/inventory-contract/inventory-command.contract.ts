@@ -109,6 +109,7 @@ export interface LockedInventoryItem {
 }
 
 export interface MovementCommand {
+  transactionType: 'INBOUND' | 'OUTBOUND';
   scopeId: string;
   key: string;
   method: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -140,6 +141,7 @@ export interface InventoryTransactionPort {
   lockInventory(itemId: string): Promise<LockedInventoryItem>;
   updateOnHand(itemId: string, balance: number): Promise<void>;
   appendLedger(input: {
+    transactionType: 'INBOUND' | 'OUTBOUND';
     inventoryItemId: string;
     productId: string;
     locationId: string;
@@ -170,6 +172,12 @@ export async function executeMovementContract(
 ): Promise<MovementResult> {
   if (!command.scopeId || !command.key || !command.actorId) {
     throw new Error('Authenticated scope, key and actor are required');
+  }
+  if (
+    (command.transactionType === 'INBOUND' && command.delta <= 0) ||
+    (command.transactionType === 'OUTBOUND' && command.delta >= 0)
+  ) {
+    throw new Error('Movement type and delta sign disagree');
   }
   if (command.expiresAt <= command.now) {
     throw new Error('Idempotency expiry must be in the future');
@@ -206,6 +214,7 @@ export async function executeMovementContract(
     }
     await tx.updateOnHand(item.id, balance);
     await tx.appendLedger({
+      transactionType: command.transactionType,
       inventoryItemId: item.id,
       productId: item.productId,
       locationId: item.locationId,
