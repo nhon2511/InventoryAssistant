@@ -90,7 +90,16 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         item.productId,
                   ),
                   subtitle: Text(
-                    'Vị trí: ${locations.where((l) => l.id == item.locationId).firstOrNull?.displayLabel ?? item.locationId ?? "Chưa chọn"}\nDự kiến: ${item.expectedQuantity} · Thực tế: ${item.actualQuantity}',
+                    [
+                      'Vị trí: ${locations.where((l) => l.id == item.locationId).firstOrNull?.displayLabel ?? item.locationId ?? "Chưa chọn"}',
+                      'Dự kiến: ${item.expectedQuantity} · Thực tế: ${item.actualQuantity}',
+                      if (widget.type == OrderType.inbound &&
+                          item.lotNumber != null)
+                        'Số lô: ${item.lotNumber}',
+                      if (widget.type == OrderType.inbound &&
+                          item.expiryDate != null)
+                        'Hạn sử dụng: ${DateFormat("dd/MM/yyyy").format(item.expiryDate!)}',
+                    ].join('\n'),
                   ),
                 ),
               const SizedBox(height: 16),

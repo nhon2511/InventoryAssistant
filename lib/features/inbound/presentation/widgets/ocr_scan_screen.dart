@@ -4,7 +4,8 @@ import 'package:smart_wms/core/widgets/scanner_back_button.dart';
 import 'package:smart_wms/core/widgets/workspace_layout.dart';
 
 class OcrScanScreen extends StatefulWidget {
-  const OcrScanScreen({super.key});
+  const OcrScanScreen({super.key, this.onApply});
+  final ValueChanged<Map<String, String>>? onApply;
   @override
   State<OcrScanScreen> createState() => _OcrScanScreenState();
 }
@@ -52,8 +53,33 @@ class _OcrScanScreenState extends State<OcrScanScreen> {
             if (result != null)
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Số lô: ${result!.lotNumber ?? "Không tìm thấy"}\nChuỗi ngày nhận diện: ${result!.expiryDate ?? "Không tìm thấy"}\nCần kiểm tra ngày hợp lệ trước khi sử dụng. Chưa lưu dữ liệu.',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Số lô: ${result!.lotNumber ?? "Không tìm thấy"}\nChuỗi ngày nhận diện: ${result!.expiryDate ?? "Không tìm thấy"}\nCần kiểm tra ngày hợp lệ trước khi sử dụng. Chưa lưu dữ liệu.',
+                    ),
+                    if (widget.onApply != null &&
+                        (result!.lotNumber != null ||
+                            result!.expiryDate != null))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            final values = <String, String>{};
+                            if (result!.lotNumber != null) {
+                              values['lotNumber'] = result!.lotNumber!;
+                            }
+                            if (result!.expiryDate != null) {
+                              values['expiryDate'] = result!.expiryDate!;
+                            }
+                            widget.onApply!(values);
+                          },
+                          icon: const Icon(Icons.playlist_add_check),
+                          label: const Text('Dùng kết quả trong dòng nhập'),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             const Divider(height: 32),

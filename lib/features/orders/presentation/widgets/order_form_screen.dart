@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:smart_wms/core/enums/order_type.dart';
 import 'package:smart_wms/core/widgets/async_panel.dart';
 import 'package:smart_wms/core/widgets/confirm_dialog.dart';
@@ -8,6 +9,7 @@ import 'package:smart_wms/core/widgets/workspace_layout.dart';
 import 'package:smart_wms/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:smart_wms/features/auth/presentation/states/auth_state.dart';
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
+import 'package:smart_wms/features/inbound/presentation/controllers/batch_scanner_controller.dart';
 import 'package:smart_wms/features/inventory/domain/entities/location.dart';
 import 'package:smart_wms/features/inventory/domain/entities/product.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/inventory_workspace_controller.dart';
@@ -58,7 +60,7 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
   late final String initialFingerprint;
   bool leaveAllowed = false;
   String get fingerprint =>
-      '${note.text}|${lines.map((line) => '${line.productId}:${line.locationId}:${line.quantity.text}').join('|')}';
+      '${note.text}|${lines.map((line) => '${line.productId}:${line.locationId}:${line.quantity.text}:${line.lotNumber.text}:${line.expiryDate.text}').join('|')}';
   Future<bool> confirmExit() async {
     if (leaveAllowed) return true;
     if (busy) return false;
@@ -88,6 +90,10 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
                   productId: i.productId,
                   locationId: i.locationId,
                   quantity: i.expectedQuantity.toString(),
+                  lotNumber: i.lotNumber ?? '',
+                  expiryDate: i.expiryDate == null
+                      ? ''
+                      : DateFormat('dd/MM/yyyy').format(i.expiryDate!),
                 ),
               )
               .toList();
@@ -178,6 +184,13 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
                           ? 'Tạo phiếu nhập'
                           : 'Tạo phiếu xuất',
                       description: 'Lập phiếu nháp và kiểm tra các dòng hàng trước khi lưu.',
+                      actions: [
+                        OutlinedButton.icon(
+                          onPressed: busy ? null : () => scanIntoOrder(ps),
+                          icon: const Icon(Icons.qr_code_scanner),
+                          label: const Text('Quét mã'),
+                        ),
+                      ],
                     ),
                     Text(
                       'Thông tin phiếu',
@@ -351,6 +364,74 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
                       : null,
                 ),
               ];
+              final lotAndExpiry = LayoutBuilder(
+                builder: (context, metadataConstraints) {
+                  final lotField = TextFormField(
+                    controller: line.lotNumber,
+                    enabled: !busy,
+                    decoration: const InputDecoration(
+                      labelText: 'Số lô (tùy chọn)',
+                    ),
+                  );
+                  final expiryField = TextFormField(
+                    controller: line.expiryDate,
+                    enabled: !busy,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'Hạn sử dụng (tùy chọn)',
+                      hintText: 'dd/MM/yyyy',
+                      suffixIcon: IconButton(
+                        tooltip: 'Chọn hạn sử dụng',
+                        onPressed: busy ? null : () => selectExpiryDate(line),
+                        icon: const Icon(Icons.calendar_month_outlined),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) return null;
+                      return _tryParseExpiryDate(value) == null
+                          ? 'Chọn ngày hợp lệ'
+                          : null;
+                    },
+                  );
+                  if (metadataConstraints.maxWidth < 560) {
+                    return Column(
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: busy
+                                ? null
+                                : () => parseLabelForLine(line),
+                            icon: const Icon(Icons.document_scanner_outlined),
+                            label: const Text('Nhập số lô từ văn bản nhãn'),
+                          ),
+                        ),
+                        lotField,
+                        const SizedBox(height: 12),
+                        expiryField,
+                      ],
+                    );
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextButton.icon(
+                        onPressed: busy ? null : () => parseLabelForLine(line),
+                        icon: const Icon(Icons.document_scanner_outlined),
+                        label: const Text('Nhập số lô từ văn bản nhãn'),
+                      ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: lotField),
+                          const SizedBox(width: 12),
+                          Expanded(child: expiryField),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              );
               final unit =
                   products
                       .where((p) => p.id == line.productId)
@@ -358,22 +439,31 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
                       ?.unit ??
                   '—';
               if (constraints.maxWidth >= 800) {
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(flex: 4, child: fields[0]),
-                    const SizedBox(width: 16),
-                    Expanded(flex: 3, child: fields[1]),
-                    const SizedBox(width: 16),
-                    Expanded(flex: 2, child: fields[2]),
-                    const SizedBox(width: 16),
-                    SizedBox(
-                      width: 70,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 14),
-                        child: Text(unit),
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 4, child: fields[0]),
+                        const SizedBox(width: 16),
+                        Expanded(flex: 3, child: fields[1]),
+                        const SizedBox(width: 16),
+                        Expanded(flex: 2, child: fields[2]),
+                        const SizedBox(width: 16),
+                        SizedBox(
+                          width: 70,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 14),
+                            child: Text(unit),
+                          ),
+                        ),
+                      ],
                     ),
+                    if (widget.type == OrderType.inbound) ...[
+                      const SizedBox(height: 12),
+                      lotAndExpiry,
+                    ],
                   ],
                 );
               }
@@ -385,6 +475,10 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
                     const SizedBox(height: 16),
                   ],
                   Text('Đơn vị: $unit'),
+                  if (widget.type == OrderType.inbound) ...[
+                    const SizedBox(height: 12),
+                    lotAndExpiry,
+                  ],
                 ],
               );
             },
@@ -416,6 +510,106 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
       leaveAllowed = true;
       context.go(widget.type == OrderType.inbound ? '/inbound' : '/outbound');
     }
+  }
+
+  Future<void> selectExpiryDate(_Line line) async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _tryParseExpiryDate(line.expiryDate.text) ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      helpText: 'Chọn hạn sử dụng',
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      line.expiryDate.text = DateFormat('dd/MM/yyyy').format(selected);
+    });
+  }
+
+  DateTime? _tryParseExpiryDate(String value) {
+    if (value.trim().isEmpty) return null;
+    for (final format in [
+      'dd/MM/yyyy',
+      'd/M/yyyy',
+      'dd-MM-yyyy',
+      'd-M-yyyy',
+      'dd.MM.yyyy',
+      'd.M.yyyy',
+      'dd/MM/yy',
+      'd/M/yy',
+    ]) {
+      try {
+        return DateFormat(format).parseStrict(value.trim());
+      } on FormatException {
+        continue;
+      }
+    }
+    return DateTime.tryParse(value.trim());
+  }
+
+  Future<void> parseLabelForLine(_Line line) async {
+    final values = await context.push<Map<String, String>>(
+      '/ocr-scan',
+      extra: 'inbound-line',
+    );
+    if (!mounted || values == null) return;
+    final rawExpiry = values['expiryDate'];
+    final parsedExpiry = rawExpiry == null
+        ? null
+        : _tryParseExpiryDate(rawExpiry);
+    setState(() {
+      final lot = values['lotNumber'];
+      if (lot != null) line.lotNumber.text = lot;
+      if (parsedExpiry != null) {
+        line.expiryDate.text = DateFormat('dd/MM/yyyy').format(parsedExpiry);
+      }
+    });
+    if (rawExpiry != null && parsedExpiry == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã nhận số lô. Hãy chọn lại hạn sử dụng bằng lịch.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> scanIntoOrder(List<Product> products) async {
+    ref.read(batchScannerControllerProvider.notifier).reset();
+    final scanned = await context.push<Map<String, int>>(
+      '/batch-scan',
+      extra: 'order-scan',
+    );
+    if (!mounted || scanned == null || scanned.isEmpty) return;
+
+    final unmatched = <String>[];
+    setState(() {
+      for (final entry in scanned.entries) {
+        final product = products
+            .where((candidate) => candidate.barcode == entry.key)
+            .firstOrNull;
+        if (product == null) {
+          unmatched.add(entry.key);
+          continue;
+        }
+        final existing = lines
+            .where((line) => line.productId == product.id)
+            .firstOrNull;
+        if (existing == null) {
+          lines.add(
+            _Line(productId: product.id, quantity: entry.value.toString()),
+          );
+        } else {
+          final current = int.tryParse(existing.quantity.text) ?? 0;
+          existing.quantity.text = (current + entry.value).toString();
+        }
+      }
+    });
+    if (!mounted) return;
+    final message = unmatched.isEmpty
+        ? 'Đã thêm mã sản phẩm vào phiếu. Hãy chọn vị trí cho từng dòng.'
+        : 'Đã thêm mã khớp; không tìm thấy ${unmatched.length} mã: ${unmatched.join(', ')}';
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> save() async {
@@ -450,6 +644,14 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
             orderId: '',
             productId: line.productId ?? '',
             locationId: line.locationId,
+            lotNumber:
+                widget.type == OrderType.inbound &&
+                    line.lotNumber.text.trim().isNotEmpty
+                ? line.lotNumber.text.trim()
+                : null,
+            expiryDate: widget.type == OrderType.inbound
+                ? _tryParseExpiryDate(line.expiryDate.text)
+                : null,
             productName: products
                 .where((p) => p.id == line.productId)
                 .firstOrNull
@@ -498,11 +700,24 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
 }
 
 class _Line {
-  _Line({this.productId, this.locationId, String quantity = ''})
-    : quantity = TextEditingController(text: quantity);
+  _Line({
+    this.productId,
+    this.locationId,
+    String quantity = '',
+    String lotNumber = '',
+    String expiryDate = '',
+  }) : quantity = TextEditingController(text: quantity),
+       lotNumber = TextEditingController(text: lotNumber),
+       expiryDate = TextEditingController(text: expiryDate);
   String? productId;
   String? locationId;
   final TextEditingController quantity;
+  final TextEditingController lotNumber;
+  final TextEditingController expiryDate;
   final key = GlobalKey();
-  void dispose() => quantity.dispose();
+  void dispose() {
+    quantity.dispose();
+    lotNumber.dispose();
+    expiryDate.dispose();
+  }
 }

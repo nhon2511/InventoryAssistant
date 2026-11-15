@@ -22,8 +22,7 @@ class ProfileScreen extends ConsumerWidget {
           children: [
             const WorkspaceHeader(
               title: 'Hồ sơ & giao diện',
-              description:
-                  'Thông tin tài khoản và tùy chọn hiển thị trong phiên.',
+              description: 'Thông tin tài khoản và tùy chọn hiển thị trên trình duyệt này.',
             ),
             Text(
               profile?.fullName ?? 'Đang tải hồ sơ',
@@ -52,7 +51,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
             const Divider(),
-            const Text('Giao diện (áp dụng trong phiên hiện tại)'),
+            const Text('Giao diện được lưu trên trình duyệt này'),
             const SizedBox(height: 12),
             DropdownButtonFormField<ThemeMode>(
               initialValue: ref.watch(themeModeProvider),

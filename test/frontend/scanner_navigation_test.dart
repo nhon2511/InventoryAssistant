@@ -103,6 +103,7 @@ void main() {
 
   for (final entry in {
     '/batch-scan': '/',
+    '/barcode-lookup': '/batch-scan',
     '/ocr-scan': '/batch-scan',
     '/pick-verify/out-1': '/outbound/out-1',
   }.entries) {
@@ -124,6 +125,65 @@ void main() {
       }
     });
   }
+
+  testWidgets('batch scan counts manual barcodes in the current session', (
+    tester,
+  ) async {
+    final router = await openApp(tester, 390);
+    router.go('/batch-scan');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Danh sách đã quét'), findsOneWidget);
+    expect(find.textContaining('không làm thay đổi tồn kho'), findsOneWidget);
+
+    final barcodeField = find.byType(TextField).first;
+    await tester.enterText(barcodeField, ' 893000000001 ');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    await tester.enterText(barcodeField, '893000000001');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SelectableText), findsOneWidget);
+    expect(find.text('× 2'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    await tester.tap(find.text('Tra một mã'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tra mã thủ công'), findsOneWidget);
+    await tester.tap(find.byType(ScannerBackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('× 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('form imports scanned counts for matching products', (
+    tester,
+  ) async {
+    final router = await openApp(tester, 390);
+    router.go('/inbound/new');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Quét mã'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '893000000001');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '893000000001');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Đưa mã vào phiếu'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Găng tay bảo hộ'), findsWidgets);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is EditableText && widget.controller.text == '2',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Hãy chọn vị trí'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('duplicate scanner cannot return to itself', (tester) async {
     final router = await openApp(tester, 390);

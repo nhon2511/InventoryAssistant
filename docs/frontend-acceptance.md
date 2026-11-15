@@ -2,6 +2,17 @@
 
 Cập nhật 13/10/2026. FE dùng dữ liệu repository/contract; không xác nhận tích hợp backend trong đợt này.
 
+## Cập nhật FE web — 15/11/2026
+
+- Form nhập có trường số lô và chọn hạn sử dụng theo ngày cho từng dòng; kết quả parser văn bản nhãn có thể điền vào dòng đang sửa sau khi người dùng xác nhận. Chi tiết phiếu hiển thị lại metadata nếu repository trả về. Đây không phải OCR ảnh/camera.
+- Theme Sáng/Tối/Theo hệ thống được lưu cục bộ bằng SharedPreferences và khôi phục khi mở lại app trên cùng trình duyệt; hồ sơ tài khoản vẫn chỉ đọc.
+- `/batch-scan` có luồng quét barcode liên tục bằng camera khi người dùng chủ động bật, nhập mã thủ công, cộng số lượt theo mã và xóa phiên có xác nhận. Có chặn lặp cùng mã trong 1,2 giây để tránh camera cộng nhiều lần cho một khung hình.
+- Form nhập/xuất có thể mở bộ quét theo phiên; khi người dùng chọn “Đưa mã vào phiếu”, mã trùng sản phẩm đã tải được thêm/cộng số lượng vào dòng tương ứng. Mã chưa khớp được báo rõ; vị trí vẫn phải chọn thủ công. Dữ liệu chỉ được giữ trong form và không ghi tồn kho.
+- Bộ đếm chỉ tồn tại trong phiên trình duyệt; không tạo phiếu nhập và không thay đổi tồn kho. `/barcode-lookup` giữ riêng luồng tra một mã; màn quét có đường mở tra mã và OCR.
+- `test/frontend/scanner_navigation_test.dart`: kiểm tra đếm mã thủ công, quay lại màn tra một mã, điều hướng OCR và giữ trạng thái form ở mobile/desktop.
+- Kiểm tra ngày 15/11/2026: Dart analyze không có issue; Flutter tests 107/107 pass; cả preview và production entry point đều build web JavaScript thành công. Wasm dry-run còn cảnh báo trong dependency `image-4.3.0`. Chưa kiểm chứng camera trên trình duyệt/thiết bị thật.
+- OCR từ ảnh/camera, ghi nhận batch vào phiếu nhập, kết nối CRUD/workflow với backend và xác minh Supabase thật vẫn ngoài phạm vi FE đã kiểm chứng; không hiển thị thành công giả cho các thao tác này.
+
 ## Đồng bộ thiết kế các màn còn lại — 13/10/2026
 
 Phạm vi bổ sung sau đợt chốt ba màn và sửa điều hướng scanner: danh sách sản phẩm/vị trí, chi tiết sản phẩm/phiếu nhập/xuất, báo cáo, trợ lý AI, hồ sơ, đăng nhập và đăng ký. Màn danh sách/form phiếu dùng chung, Dashboard và ba màn scanner giữ phần đã nghiệm thu.
