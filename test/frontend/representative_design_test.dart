@@ -245,12 +245,33 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Thêm dòng hàng'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField).at(1), '12');
-    await tester.enterText(find.byType(TextFormField).at(2), '37');
+    Finder lineCard(int number) => find
+        .ancestor(of: find.text('Dòng $number'), matching: find.byType(Card))
+        .first;
+
+    final firstLineQuantity = find
+        .descendant(of: lineCard(1), matching: find.byType(TextFormField))
+        .first;
+    final secondLineQuantity = find
+        .descendant(of: lineCard(2), matching: find.byType(TextFormField))
+        .first;
+    await tester.enterText(firstLineQuantity, '12');
+    await tester.enterText(secondLineQuantity, '37');
     await tester.tap(find.byTooltip('Xóa dòng').first);
     await tester.pumpAndSettle();
-    expect(find.text('37'), findsOneWidget);
-    expect(find.text('12'), findsNothing);
+    expect(find.text('Dòng 1'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is EditableText && widget.controller.text == '37',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is EditableText && widget.controller.text == '12',
+      ),
+      findsNothing,
+    );
     expect(tester.takeException(), isNull);
   });
   testWidgets(

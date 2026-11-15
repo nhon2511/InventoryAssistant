@@ -94,8 +94,19 @@ void main() {
           '/$type/new',
         );
         expect(tester.state(find.byType(OrderFormScreen)), same(formState));
-        expect(find.text('Ghi chú đang nhập'), findsOneWidget);
-        expect(find.text('7'), findsOneWidget);
+        final noteField = find.byType(TextFormField, skipOffstage: false).first;
+        await tester.ensureVisible(noteField);
+        expect(
+          tester.widget<TextFormField>(noteField).controller?.text,
+          'Ghi chú đang nhập',
+        );
+        final quantityField = find
+            .byType(TextFormField, skipOffstage: false)
+            .at(1);
+        expect(
+          tester.widget<TextFormField>(quantityField).controller?.text,
+          '7',
+        );
         expect(tester.takeException(), isNull);
       });
     }
@@ -173,11 +184,29 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Đưa mã vào phiếu'));
     await tester.pumpAndSettle();
-
-    expect(find.textContaining('Găng tay bảo hộ'), findsWidgets);
+    final lineTitle = find.text('Dòng 2');
+    await tester.scrollUntilVisible(
+      lineTitle,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final importedLine = find
+        .ancestor(of: lineTitle, matching: find.byType(Card))
+        .first;
+    await tester.ensureVisible(importedLine);
     expect(
-      find.byWidgetPredicate(
-        (widget) => widget is EditableText && widget.controller.text == '2',
+      find.descendant(
+        of: importedLine,
+        matching: find.textContaining('Găng tay bảo hộ'),
+      ),
+      findsWidgets,
+    );
+    expect(
+      find.descendant(
+        of: importedLine,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is EditableText && widget.controller.text == '2',
+        ),
       ),
       findsOneWidget,
     );

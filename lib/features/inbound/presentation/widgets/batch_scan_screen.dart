@@ -122,6 +122,7 @@ class _BatchScanScreenState extends ConsumerState<BatchScanScreen> {
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(batchScannerControllerProvider);
+    final canApply = widget.onApply != null && session.scannedItems.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -136,6 +137,19 @@ class _BatchScanScreenState extends ConsumerState<BatchScanScreen> {
           const SizedBox(width: 8),
         ],
       ),
+      bottomNavigationBar: canApply
+          ? SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: FilledButton.icon(
+                  onPressed: () => _applyScans(session.scannedItems),
+                  icon: const Icon(Icons.playlist_add_check),
+                  label: const Text('Đưa mã vào phiếu'),
+                ),
+              ),
+            )
+          : null,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1200),
@@ -154,18 +168,6 @@ class _BatchScanScreenState extends ConsumerState<BatchScanScreen> {
                   label: const Text('OCR / số lô'),
                 ),
               ),
-              if (widget.onApply != null && session.scannedItems.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: FilledButton.icon(
-                      onPressed: () => _applyScans(session.scannedItems),
-                      icon: const Icon(Icons.playlist_add_check),
-                      label: const Text('Đưa mã vào phiếu'),
-                    ),
-                  ),
-                ),
               const SizedBox(height: 8),
               const _LocalSessionNotice(),
               const SizedBox(height: 20),
