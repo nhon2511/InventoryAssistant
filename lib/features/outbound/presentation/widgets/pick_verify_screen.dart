@@ -115,6 +115,13 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
   Widget build(BuildContext context) {
     final item = _selectedItem;
     final canVerify = item != null && item.barcode.trim().isNotEmpty;
+    final remainingQuantity = item == null
+        ? 0
+        : item.expectedQuantity - _pickedQuantity;
+    final isComplete = item != null && remainingQuantity <= 0;
+    final progress = item == null || item.expectedQuantity <= 0
+        ? 0.0
+        : (_pickedQuantity / item.expectedQuantity).clamp(0.0, 1.0);
 
     return Scaffold(
       appBar: AppBar(
@@ -149,17 +156,20 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
                         labelText: 'Mặt hàng cần lấy',
                         border: OutlineInputBorder(),
                       ),
-                      items: widget.items
-                          .map(
-                            (pickItem) => DropdownMenuItem(
-                              value: pickItem,
-                              child: Text(
-                                '${pickItem.productName} (${pickItem.remaining} còn lại)${pickItem.barcode.trim().isEmpty ? ' • thiếu mã vạch' : ''}',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(),
+                      items: widget.items.map((pickItem) {
+                        final picked =
+                            _pickedQuantities[pickItem] ??
+                            pickItem.pickedQuantity;
+                        final remaining = (pickItem.expectedQuantity - picked)
+                            .clamp(0, pickItem.expectedQuantity);
+                        return DropdownMenuItem(
+                          value: pickItem,
+                          child: Text(
+                            '${pickItem.productName} ($remaining còn lại)${pickItem.barcode.trim().isEmpty ? ' • thiếu mã vạch' : ''}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
                       onChanged: (nextItem) {
                         if (nextItem == null) return;
                         setState(() {
@@ -178,6 +188,38 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
                     '${item.locationLabel} • $_pickedQuantity/${item.expectedQuantity}',
                   ),
                   leading: const Icon(Icons.inventory_2_outlined),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Tiến độ lấy hàng'),
+                          Chip(
+                            label: Text(
+                              isComplete
+                                  ? 'Đã lấy đủ'
+                                  : 'Còn $remainingQuantity',
+                            ),
+                            avatar: Icon(
+                              isComplete
+                                  ? Icons.check_circle_outline
+                                  : Icons.pending_outlined,
+                              size: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Semantics(
+                        label:
+                            'Đã lấy $_pickedQuantity trên ${item.expectedQuantity}',
+                        child: LinearProgressIndicator(value: progress),
+                      ),
+                    ],
+                  ),
                 ),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),

@@ -146,7 +146,7 @@ void main() {
               productName: 'Bánh quy',
               barcode: '893001',
               locationLabel: 'A-01-01-01',
-              expectedQuantity: 2,
+              expectedQuantity: 1,
               pickedQuantity: 0,
             ),
           ],
@@ -162,7 +162,8 @@ void main() {
     expect(find.text('Đã xác nhận sản phẩm: Bánh quy'), findsOneWidget);
     await tester.tap(find.text('Đóng'));
     await tester.pumpAndSettle();
-    expect(find.text('A-01-01-01 • 1/2'), findsOneWidget);
+    expect(find.text('A-01-01-01 • 1/1'), findsOneWidget);
+    expect(find.text('Đã lấy đủ'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   testWidgets('pick verification explains and blocks missing barcodes', (
