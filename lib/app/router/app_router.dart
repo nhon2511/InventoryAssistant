@@ -21,6 +21,7 @@ import 'package:smart_wms/features/inventory/presentation/widgets/product_detail
 import 'package:smart_wms/features/inventory/presentation/widgets/product_list_screen.dart';
 import 'package:smart_wms/features/inventory/presentation/widgets/stock_overview_screen.dart';
 import 'package:smart_wms/features/orders/presentation/widgets/order_form_screen.dart';
+import 'package:smart_wms/features/outbound/domain/entities/pick_list_item.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/outbound_detail_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/outbound_list_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/pick_verify_screen.dart';
@@ -105,7 +106,11 @@ final _scannerRoutes = [
     name: RouteNames.pickVerify,
     builder: (context, state) {
       final orderId = state.pathParameters['orderId']!;
-      return PickVerifyScreen(orderId: orderId);
+      final items = state.extra;
+      return PickVerifyScreen(
+        orderId: orderId,
+        items: items is List<PickListItem> ? items : const [],
+      );
     },
   ),
 ];

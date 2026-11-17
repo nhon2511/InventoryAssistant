@@ -31,6 +31,7 @@ import 'package:smart_wms/features/inventory/presentation/widgets/stock_overview
 import 'package:smart_wms/features/orders/presentation/controllers/order_workspace_controller.dart';
 import 'package:smart_wms/features/orders/presentation/widgets/order_detail_screen.dart';
 import 'package:smart_wms/features/orders/presentation/widgets/order_form_screen.dart';
+import 'package:smart_wms/features/outbound/domain/entities/pick_list_item.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/outbound_list_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/pick_verify_screen.dart';
 import 'package:smart_wms/features/reports/presentation/widgets/reports_screen.dart';
@@ -128,6 +129,42 @@ void main() {
       });
     }
   }
+  testWidgets('pick verification supports manual barcode entry', (
+    tester,
+  ) async {
+    final repository = PreviewRepository();
+    addTearDown(repository.dispose);
+    await repository.signIn(email: 'admin@preview.local', password: 'test');
+    await tester.pumpWidget(
+      harness(
+        repository,
+        const PickVerifyScreen(
+          orderId: 'out-1',
+          items: [
+            PickListItem(
+              productId: 'p-1',
+              productName: 'Bánh quy',
+              barcode: '893001',
+              locationLabel: 'A-01-01-01',
+              expectedQuantity: 2,
+              pickedQuantity: 0,
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '893001');
+    await tester.tap(find.text('Xác nhận'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Đã xác nhận sản phẩm: Bánh quy'), findsOneWidget);
+    await tester.tap(find.text('Đóng'));
+    await tester.pumpAndSettle();
+    expect(find.text('A-01-01-01 • 1/2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('inventory error is localized and retry restores data', (
     tester,
   ) async {
