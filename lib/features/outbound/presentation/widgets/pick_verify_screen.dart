@@ -114,6 +114,7 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
   @override
   Widget build(BuildContext context) {
     final item = _selectedItem;
+    final canVerify = item != null && item.barcode.trim().isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -153,7 +154,7 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
                             (pickItem) => DropdownMenuItem(
                               value: pickItem,
                               child: Text(
-                                '${pickItem.productName} (${pickItem.remaining} còn lại)',
+                                '${pickItem.productName} (${pickItem.remaining} còn lại)${pickItem.barcode.trim().isEmpty ? ' • thiếu mã vạch' : ''}',
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -166,6 +167,7 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
                           _pickedQuantity =
                               _pickedQuantities[nextItem] ??
                               nextItem.pickedQuantity;
+                          _barcodeController.clear();
                         });
                       },
                     ),
@@ -185,24 +187,35 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
                   ),
                 ),
                 Expanded(
-                  child: MobileScanner(
-                    controller: _scannerController,
-                    onDetect: _handleBarcode,
-                    errorBuilder: (context, error, child) => Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          'Không mở được camera. Bạn có thể nhập mã vạch bên dưới để tiếp tục.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyLarge,
+                  child: canVerify
+                      ? MobileScanner(
+                          controller: _scannerController,
+                          onDetect: _handleBarcode,
+                          errorBuilder: (context, error, child) => Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                'Không mở được camera. Bạn có thể nhập mã vạch bên dưới để tiếp tục.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              'Dòng hàng này chưa có mã vạch trong dữ liệu nên chưa thể đối soát. Hãy chọn dòng khác hoặc bổ sung mã vạch trong sản phẩm.',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
                 ),
                 const Padding(
                   padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Text('Đưa mã vạch sản phẩm vào khung quét.'),
+                  child: Text('Quét camera hoặc nhập mã vạch thủ công.'),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
@@ -211,7 +224,7 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
                       Expanded(
                         child: TextField(
                           controller: _barcodeController,
-                          enabled: !_isProcessingScan,
+                          enabled: !_isProcessingScan && canVerify,
                           textInputAction: TextInputAction.done,
                           onSubmitted: _verifyBarcode,
                           decoration: const InputDecoration(
@@ -222,7 +235,7 @@ class _PickVerifyScreenState extends ConsumerState<PickVerifyScreen> {
                       ),
                       const SizedBox(width: 8),
                       FilledButton(
-                        onPressed: _isProcessingScan
+                        onPressed: _isProcessingScan || !canVerify
                             ? null
                             : () => _verifyBarcode(_barcodeController.text),
                         child: const Text('Xác nhận'),

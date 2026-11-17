@@ -165,6 +165,43 @@ void main() {
     expect(find.text('A-01-01-01 • 1/2'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('pick verification explains and blocks missing barcodes', (
+    tester,
+  ) async {
+    final repository = PreviewRepository();
+    addTearDown(repository.dispose);
+    await repository.signIn(email: 'admin@preview.local', password: 'test');
+    await tester.pumpWidget(
+      harness(
+        repository,
+        const PickVerifyScreen(
+          orderId: 'out-1',
+          items: [
+            PickListItem(
+              productId: 'p-1',
+              productName: 'Bánh quy',
+              barcode: '',
+              locationLabel: 'A-01-01-01',
+              expectedQuantity: 2,
+              pickedQuantity: 0,
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('chưa có mã vạch trong dữ liệu'),
+      findsOneWidget,
+    );
+    expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+    expect(
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      isNull,
+    );
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('inventory error is localized and retry restores data', (
     tester,
   ) async {
