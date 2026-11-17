@@ -2,6 +2,13 @@
 
 Cập nhật 13/10/2026. FE dùng dữ liệu repository/contract; không xác nhận tích hợp backend trong đợt này.
 
+## OCR ảnh trên web — 17/11/2026
+
+- Màn OCR cho phép chọn ảnh từ máy hoặc mở camera sau trên thiết bị hỗ trợ; nhận dạng chữ tiếng Việt và tiếng Anh ngay trong trình duyệt bằng Tesseract.js.
+- Văn bản OCR được đưa vào ô có thể sửa; số lô và hạn dùng được phân tích rồi hiển thị thành trường riêng để người dùng rà soát trước khi trả về dòng phiếu nhập. Không lưu phiếu hoặc thay đổi tồn kho.
+- Bộ OCR và dữ liệu ngôn ngữ được tải từ jsDelivr ở lần sử dụng đầu; cần internet và CSP của nơi triển khai phải cho phép tải module/WASM từ CDN. Trên điện thoại, trình duyệt có thể mở camera sau hoặc thư viện ảnh; quyền camera yêu cầu HTTPS hoặc localhost. Ảnh được xử lý phía client, không gửi tới backend.
+- Đã thêm kiểm thử widget với OCR giả cho trạng thái thành công/lỗi và chỉnh sửa kết quả. Chưa xác minh camera, CDN/CSP hoặc độ chính xác OCR trên trình duyệt/điện thoại thật; ngày nhận diện cần được người dùng kiểm tra.
+
 ## Cập nhật FE web — 15/11/2026
 
 - Form nhập có trường số lô và chọn hạn sử dụng theo ngày cho từng dòng; kết quả parser văn bản nhãn có thể điền vào dòng đang sửa sau khi người dùng xác nhận. Chi tiết phiếu hiển thị lại metadata nếu repository trả về. Đây không phải OCR ảnh/camera.
