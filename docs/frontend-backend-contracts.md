@@ -64,7 +64,8 @@ File: `lib/features/orders/domain/repositories/order_workflow_repository.dart`.
 - PDF dùng dữ liệu tương tự, font Unicode từ Printing tải ở lần đầu; offline lần đầu hoặc hạn chế tải/chia sẻ có thể thất bại và UI báo lỗi.
 - Camera barcode dùng MobileScanner trên web/Android/iOS: cần HTTPS/localhost, permission và kiểm tra thiết bị. Chưa xác minh nhận mã từ camera thật.
 - Voice dùng speech_to_text; văn bản nhận diện cần người dùng bấm gửi. Chưa xác minh micro/nhận tiếng Việt trên thiết bị thật.
-- OCR hiện chỉ parser văn bản dán có nhãn mô phỏng; chưa có pipeline ảnh/camera ML Kit.
+- OCR ảnh web dùng Tesseract.js chạy trong trình duyệt, tải worker/WASM và dữ liệu `vie+eng` từ jsDelivr khi người dùng chọn ảnh. Không gửi ảnh lên Supabase/backend. FE phân tích LOT/HSD bằng parser hiện có và yêu cầu người dùng rà soát; chưa lưu phiếu hoặc thay đổi tồn.
+- Chưa xác minh CDN/CSP, khả năng camera trên thiết bị thật hoặc độ chính xác OCR. Camera web yêu cầu HTTPS/localhost và quyền trình duyệt. ML Kit Flutter vẫn không dùng cho web; không coi kiểm thử widget giả là kiểm chứng nhận diện ngoài trình duyệt.
 
 ## Nghiệm thu FE
 

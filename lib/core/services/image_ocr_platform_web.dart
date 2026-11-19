@@ -65,4 +65,3 @@ class _WebImageOcrService implements ImageOcrService {
 }
 
 ImageOcrService createImageOcrService() => _WebImageOcrService();
-

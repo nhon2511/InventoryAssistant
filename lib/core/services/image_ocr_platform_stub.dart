@@ -11,4 +11,3 @@ class _UnsupportedImageOcrService implements ImageOcrService {
   @override
   void revokePreview(String previewUrl) {}
 }
-

@@ -20,4 +20,3 @@ abstract interface class ImageOcrService {
 }
 
 ImageOcrService createImageOcrService() => platform.createImageOcrService();
-
