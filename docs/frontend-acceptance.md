@@ -169,3 +169,4 @@ Test bổ sung gồm role/ownership, tổng dòng xuất trùng và tồn giữ 
 - Hồ sơ chỉ đọc; theme chưa lưu qua phiên; danh mục/warehouse chưa có model.
 - Báo cáo hiện là snapshot tồn + lịch sử header phiếu, không phải sổ nhập/xuất/tồn.
 - Backend Supabase/Edge Functions/RPC và authorization cuối cùng chưa được xác minh; xem frontend-backend-contracts.md.
+
