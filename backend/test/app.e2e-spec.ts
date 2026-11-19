@@ -9,6 +9,7 @@ import { AllExceptionsFilter } from '../src/common/filters/http-exception.filter
 import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor.js';
 import { HealthModule } from '../src/health/health.module.js';
 import { OrdersModule } from '../src/orders/orders.module.js';
+import { ProductsModule } from '../src/products/products.module.js';
 import { PrismaModule } from '../src/prisma/prisma.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
@@ -29,6 +30,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
     PrismaModule,
     HealthModule,
     OrdersModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
@@ -156,6 +158,19 @@ describe('Smart WMS Backend (e2e)', () => {
     expect(response.body).toHaveProperty('statusCode', 503);
     expect(response.body.data).toHaveProperty('status', 'not_ready');
     expect(response.body.data).toHaveProperty('database', 'disconnected');
+  });
+
+  it('GET /api/v1/products requires authentication', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/products')
+      .expect(401);
+  });
+
+  it('POST /api/v1/products requires authentication', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/products')
+      .send({ name: 'Test', sku: 'SKU-1', barcode: 'BC-1' })
+      .expect(401);
   });
 
   it('GET /api/v1/non-existent-route should return 404 with standard error filter', async () => {

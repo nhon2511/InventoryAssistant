@@ -5,6 +5,7 @@ import { PrismaService } from './prisma/prisma.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { HealthModule } from './health/health.module.js';
 import { OrdersModule } from './orders/orders.module.js';
+import { ProductsModule } from './products/products.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -44,6 +45,7 @@ describe('AppModule', () => {
         PrismaModule,
         HealthModule,
         OrdersModule,
+        ProductsModule,
       ],
       controllers: [AppController],
       providers: [AppService],
