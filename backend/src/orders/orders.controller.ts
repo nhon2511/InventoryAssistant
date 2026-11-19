@@ -1,0 +1,112 @@
+import {
+  Body,
+  ConflictException,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  InternalServerErrorException,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+  ApiUnprocessableEntityResponse,
+} from '@nestjs/swagger';
+import { JwtAuthenticationGuard, type AuthenticatedRequest } from '../auth/authentication.guard.js';
+import { RequireTrustedRoles, TrustedRolesGuard } from '../auth/trusted-roles.guard.js';
+import { OrderConfirmationService, type ConfirmationResult } from '../inventory-contract/order-confirmation.service.js';
+import { ConfirmOrderDto, ConfirmOrderParamsDto, ConfirmOrderResponseDto } from './dto/confirm-order.dto.js';
+
+@ApiTags('Orders')
+@ApiBearerAuth('JWT-auth')
+@Controller('orders')
+@UseGuards(JwtAuthenticationGuard, TrustedRolesGuard)
+export class OrdersController {
+  constructor(
+    private readonly confirmationService: OrderConfirmationService,
+  ) {}
+
+  @Post(':orderId/confirm')
+  @HttpCode(HttpStatus.OK)
+  @RequireTrustedRoles('ADMIN', 'MANAGER')
+  @ApiOperation({
+    summary: 'Xác nhận đơn hàng nhập/xuất kho',
+    description:
+      'Xác nhận đơn hàng DRAFT, cập nhật tồn kho và ghi sổ cái. '
+      + 'Yêu cầu Bearer JWT token với vai trò ADMIN hoặc MANAGER. '
+      + 'Idempotency key đảm bảo gọi trùng an toàn.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Đơn hàng đã được xác nhận thành công hoặc replay.',
+    type: ConfirmOrderResponseDto,
+  })
+  @ApiUnauthorizedResponse({ description: 'Token không hợp lệ hoặc hết hạn.' })
+  @ApiForbiddenResponse({ description: 'Vai trò không đủ quyền (cần ADMIN hoặc MANAGER).' })
+  @ApiNotFoundResponse({ description: 'Đơn hàng không tồn tại.' })
+  @ApiConflictResponse({ description: 'Idempotency key đã được dùng với nội dung khác.' })
+  @ApiUnprocessableEntityResponse({ description: 'Đơn hàng không ở trạng thái DRAFT hoặc dữ liệu không hợp lệ.' })
+  async confirm(
+    @Param() params: ConfirmOrderParamsDto,
+    @Body() body: ConfirmOrderDto,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<ConfirmOrderResponseDto> {
+    const principal = req.verifiedPrincipal;
+    if (!principal) {
+      throw new InternalServerErrorException('Principal not resolved');
+    }
+
+    // Build a minimal bearer token string from the original request
+    // to pass to the service (which re-verifies it internally).
+    const authHeader = req.headers.authorization;
+    const token = typeof authHeader === 'string'
+      ? authHeader.replace(/^Bearer\s+/i, '')
+      : '';
+
+    let result: ConfirmationResult;
+    try {
+      result = await this.confirmationService.confirm(token, {
+        orderId: params.orderId,
+        type: body.type,
+        idempotencyKey: body.idempotencyKey,
+      });
+    } catch (error) {
+      // Map domain errors to HTTP status codes.
+      const message = error instanceof Error ? error.message : 'Confirmation failed';
+      if (message.includes('Order not found') || message.includes('ownership mismatch')) {
+        throw new ConflictException(message);
+      }
+      if (message.includes('cannot be confirmed') || message.includes('Invalid') ||
+          message.includes('no lines') || message.includes('Missing or ambiguous') ||
+          message.includes('identity mismatch') || message.includes('Insufficient')) {
+        throw new ConflictException(message);
+      }
+      throw new InternalServerErrorException('Order confirmation failed');
+    }
+
+    switch (result.kind) {
+      case 'conflict':
+        throw new ConflictException('Idempotency key conflict: same key used with different request');
+      case 'in_progress':
+        throw new ConflictException('Confirmation already in progress');
+      case 'expired':
+        throw new ConflictException('Idempotency key has expired');
+      case 'applied':
+      case 'replay':
+        return {
+          kind: result.kind,
+          orderId: result.orderId,
+          movements: result.movements,
+        };
+    }
+  }
+}
