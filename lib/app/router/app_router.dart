@@ -11,6 +11,7 @@ import 'package:smart_wms/features/auth/presentation/states/auth_state.dart';
 import 'package:smart_wms/features/auth/presentation/widgets/login_screen.dart';
 import 'package:smart_wms/features/auth/presentation/widgets/profile_screen.dart';
 import 'package:smart_wms/features/auth/presentation/widgets/register_screen.dart';
+import 'package:smart_wms/features/inbound/presentation/widgets/barcode_lookup_screen.dart';
 import 'package:smart_wms/features/inbound/presentation/widgets/batch_scan_screen.dart';
 import 'package:smart_wms/features/inbound/presentation/widgets/inbound_detail_screen.dart';
 import 'package:smart_wms/features/inbound/presentation/widgets/inbound_list_screen.dart';
@@ -20,6 +21,7 @@ import 'package:smart_wms/features/inventory/presentation/widgets/product_detail
 import 'package:smart_wms/features/inventory/presentation/widgets/product_list_screen.dart';
 import 'package:smart_wms/features/inventory/presentation/widgets/stock_overview_screen.dart';
 import 'package:smart_wms/features/orders/presentation/widgets/order_form_screen.dart';
+import 'package:smart_wms/features/outbound/domain/entities/pick_list_item.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/outbound_detail_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/outbound_list_screen.dart';
 import 'package:smart_wms/features/outbound/presentation/widgets/pick_verify_screen.dart';
@@ -79,19 +81,36 @@ final _scannerRoutes = [
   GoRoute(
     path: '/batch-scan',
     name: RouteNames.batchScan,
-    builder: (context, state) => const BatchScanScreen(),
+    builder: (context, state) => BatchScanScreen(
+      onApply: state.extra == 'order-scan'
+          ? (items) => context.pop<Map<String, int>>(items)
+          : null,
+    ),
+  ),
+  GoRoute(
+    path: '/barcode-lookup',
+    name: RouteNames.barcodeLookup,
+    builder: (context, state) => const BarcodeLookupScreen(),
   ),
   GoRoute(
     path: '/ocr-scan',
     name: RouteNames.ocrScan,
-    builder: (context, state) => const OcrScanScreen(),
+    builder: (context, state) => OcrScanScreen(
+      onApply: state.extra is String && state.extra == 'inbound-line'
+          ? (values) => context.pop<Map<String, String>>(values)
+          : null,
+    ),
   ),
   GoRoute(
     path: '/pick-verify/:orderId',
     name: RouteNames.pickVerify,
     builder: (context, state) {
       final orderId = state.pathParameters['orderId']!;
-      return PickVerifyScreen(orderId: orderId);
+      final items = state.extra;
+      return PickVerifyScreen(
+        orderId: orderId,
+        items: items is List<PickListItem> ? items : const [],
+      );
     },
   ),
 ];

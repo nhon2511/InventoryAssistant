@@ -4,6 +4,8 @@
 > **Dự án:** Smart WMS - Hệ thống Quản lý Tồn kho Thông minh  
 > **Công nghệ:** Flutter, Riverpod (Code Generation), Supabase, GoRouter, fpdart, Freezed, ML Kit, Speech-to-Text, FL Chart, Excel, PDF, MobileScanner.
 
+> **Lưu ý trạng thái:** Nội dung và scorecard bên dưới là ảnh chụp kế hoạch ngày 03/11/2026, đã lỗi thời so với code FE hiện tại. Các mục BatchScan placeholder, chi tiết phiếu xuất và CRUD UI vị trí đã được triển khai sau ngày này. Không dùng các tỷ lệ phần trăm hoặc TODO bên dưới làm trạng thái hiện tại; xem [bàn giao FE](docs/FRONTEND_HANDOVER.md), [nghiệm thu FE](docs/frontend-acceptance.md) và [contract FE–BE](docs/frontend-backend-contracts.md).
+
 ---
 
 ## 1. Tổng Quan Tiến Độ Hiện Trạng Dự Án (Cập nhật 03/11/2026)

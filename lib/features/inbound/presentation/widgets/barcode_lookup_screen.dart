@@ -30,7 +30,7 @@ class _BarcodeLookupScreenState extends ConsumerState<BarcodeLookupScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      leading: const ScannerBackButton(),
+      leading: const ScannerBackButton(fallback: '/batch-scan'),
       title: const Text('Tra mã hàng'),
     ),
     body: Center(

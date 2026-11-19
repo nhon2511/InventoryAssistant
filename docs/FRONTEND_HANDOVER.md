@@ -12,7 +12,7 @@ Tài liệu chi tiết: [nghiệm thu FE và bằng chứng](frontend-acceptance
 | Dashboard và shell desktop/mobile | Chỉ số tồn theo đơn vị, cảnh báo tồn thấp, drilldown, quick actions | Có | Chưa | Snapshot/realtime và quyền dữ liệu thật; chưa có biểu đồ biến động từ ledger |
 | Sản phẩm, tồn và vị trí | Danh sách, tìm kiếm, chi tiết; form thêm/sửa/xóa Admin với xác nhận | Có | Chưa | Production CRUD adapter, unique constraint, RLS; chưa có category/warehouse entity |
 | Phiếu nhập/xuất | Danh sách, lọc, chi tiết, form nhiều dòng, ghi chú, nháp, duyệt/từ chối; kiểm tra số lượng tại FE | Có | Chưa | Lưu nguyên tử/idempotent, review compare-and-set, transaction tồn; datasource phiếu xuất thật chưa tải line items |
-| Tra mã, Pick Verify và OCR | Nhập mã, UI camera, đối soát đếm trong phiên; OCR parser văn bản dán | Có, có mô phỏng gắn nhãn | Chưa | Camera và OCR ảnh thật trên thiết bị, lưu kết quả đối soát, batch receiving |
+| Tra mã, Pick Verify và OCR | Nhập mã, UI camera, đối soát đếm trong phiên; OCR ảnh web tiếng Việt/Anh, sửa kết quả trước khi áp dụng | Có; OCR xử lý client, CDN cần internet | Chưa | Xác minh CDN/CSP và camera/OCR trên thiết bị thật; lưu kết quả đối soát, batch receiving |
 | Báo cáo | Tồn hiện tại, header phiếu lọc ngày tạo, xuất Excel/PDF từ dữ liệu nhận được | Có | Chưa | Ledger cho tồn đầu/cuối kỳ và nhập/xuất thực tế; xác minh font PDF/chia sẻ trên thiết bị |
 | Trợ lý AI/voice | Chat, loading/lỗi/retry, bản nháp một dòng cần xác nhận; voice điền văn bản | Có, AI fixture gắn nhãn | Chưa | Edge Functions, micro thật, NLU nhiều dòng/lot/expiry và quyền server |
 

@@ -19,6 +19,7 @@ abstract final class RouteNames {
   static const String inboundList = 'inbound-list';
   static const String inboundDetail = 'inbound-detail';
   static const String batchScan = 'batch-scan';
+  static const String barcodeLookup = 'barcode-lookup';
   static const String ocrScan = 'ocr-scan';
 
   // ── Outbound ──────────────────────────────────────────────────────

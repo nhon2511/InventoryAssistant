@@ -50,7 +50,7 @@ File: `lib/features/orders/domain/repositories/order_workflow_repository.dart`.
 ### Contract còn cần thỏa thuận trước tích hợp
 
 1. Dữ liệu danh mục, warehouse và quan hệ với product/location: model hiện chưa có categoryId/warehouseId hoặc entity tương ứng. Không tự tạo schema trên FE.
-2. Cập nhật hồ sơ cá nhân và lưu tùy chọn giao diện: hồ sơ hiện chỉ đọc; theme được đổi trong phiên.
+2. Cập nhật hồ sơ cá nhân: hồ sơ hiện chỉ đọc. Theme được lưu cục bộ bằng SharedPreferences; không đồng bộ tùy chọn giữa thiết bị.
 3. Hoàn tất nhập/xuất, reservation, kiểm kê, batch scan, đối soát: cần giao dịch tồn an toàn, kiểm tra trạng thái/quyền và retry idempotent. FE hiện không hiển thị thành công cập nhật tồn.
 4. Kết quả đối soát barcode: dòng phiếu, product barcode, số lượng/session, location và lưu kết quả; hiện số đếm chỉ trong phiên.
 5. Ledger lịch sử: timestamp giao dịch, type, product, location, unit, delta, balance, order/user reference và quyền phạm vi. Dùng ledger mới tính tồn đầu/cuối kỳ và biểu đồ biến động.
@@ -64,7 +64,8 @@ File: `lib/features/orders/domain/repositories/order_workflow_repository.dart`.
 - PDF dùng dữ liệu tương tự, font Unicode từ Printing tải ở lần đầu; offline lần đầu hoặc hạn chế tải/chia sẻ có thể thất bại và UI báo lỗi.
 - Camera barcode dùng MobileScanner trên web/Android/iOS: cần HTTPS/localhost, permission và kiểm tra thiết bị. Chưa xác minh nhận mã từ camera thật.
 - Voice dùng speech_to_text; văn bản nhận diện cần người dùng bấm gửi. Chưa xác minh micro/nhận tiếng Việt trên thiết bị thật.
-- OCR hiện chỉ parser văn bản dán có nhãn mô phỏng; chưa có pipeline ảnh/camera ML Kit.
+- OCR ảnh web dùng Tesseract.js chạy trong trình duyệt, tải worker/WASM và dữ liệu `vie+eng` từ jsDelivr khi người dùng chọn ảnh. Không gửi ảnh lên Supabase/backend. FE phân tích LOT/HSD bằng parser hiện có và yêu cầu người dùng rà soát; chưa lưu phiếu hoặc thay đổi tồn.
+- Chưa xác minh CDN/CSP, khả năng camera trên thiết bị thật hoặc độ chính xác OCR. Camera web yêu cầu HTTPS/localhost và quyền trình duyệt. ML Kit Flutter vẫn không dùng cho web; không coi kiểm thử widget giả là kiểm chứng nhận diện ngoài trình duyệt.
 
 ## Nghiệm thu FE
 

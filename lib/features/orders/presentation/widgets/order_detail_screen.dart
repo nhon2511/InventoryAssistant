@@ -13,6 +13,7 @@ import 'package:smart_wms/features/inventory/presentation/controllers/location_c
 import 'package:smart_wms/features/inventory/presentation/controllers/product_controller.dart';
 import 'package:smart_wms/features/orders/presentation/controllers/order_workspace_controller.dart';
 import 'package:smart_wms/features/orders/presentation/widgets/order_labels.dart';
+import 'package:smart_wms/features/outbound/domain/entities/pick_list_item.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
   const OrderDetailScreen({
@@ -90,7 +91,16 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         item.productId,
                   ),
                   subtitle: Text(
-                    'Vị trí: ${locations.where((l) => l.id == item.locationId).firstOrNull?.displayLabel ?? item.locationId ?? "Chưa chọn"}\nDự kiến: ${item.expectedQuantity} · Thực tế: ${item.actualQuantity}',
+                    [
+                      'Vị trí: ${locations.where((l) => l.id == item.locationId).firstOrNull?.displayLabel ?? item.locationId ?? "Chưa chọn"}',
+                      'Dự kiến: ${item.expectedQuantity} · Thực tế: ${item.actualQuantity}',
+                      if (widget.type == OrderType.inbound &&
+                          item.lotNumber != null)
+                        'Số lô: ${item.lotNumber}',
+                      if (widget.type == OrderType.inbound &&
+                          item.expiryDate != null)
+                        'Hạn sử dụng: ${DateFormat("dd/MM/yyyy").format(item.expiryDate!)}',
+                    ].join('\n'),
                   ),
                 ),
               const SizedBox(height: 16),
@@ -167,7 +177,30 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   order.items.isNotEmpty &&
                   !order.status.isTerminal)
                 OutlinedButton.icon(
-                  onPressed: () => context.push('/pick-verify/${order.id}'),
+                  onPressed: () {
+                    final pickItems = order.items.map((line) {
+                      final product = products
+                          .where((candidate) => candidate.id == line.productId)
+                          .firstOrNull;
+                      final location = locations
+                          .where((candidate) => candidate.id == line.locationId)
+                          .firstOrNull;
+                      return PickListItem(
+                        productId: line.productId,
+                        productName:
+                            line.productName ?? product?.name ?? line.productId,
+                        barcode: product?.barcode ?? '',
+                        locationLabel:
+                            location?.displayLabel ??
+                            line.locationId ??
+                            'Chưa chọn',
+                        expectedQuantity: line.expectedQuantity,
+                        pickedQuantity: line.actualQuantity,
+                        lotNumber: line.lotNumber,
+                      );
+                    }).toList();
+                    context.push('/pick-verify/${order.id}', extra: pickItems);
+                  },
                   icon: const Icon(Icons.qr_code_scanner),
                   label: const Text('Đối soát mã hàng'),
                 ),

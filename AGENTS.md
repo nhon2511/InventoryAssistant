@@ -84,3 +84,23 @@ For a new or substantially changed feature, verify:
 - `features/inbound/` — receiving orders, batch scanning, and OCR.
 - `features/outbound/` — outbound orders, pick lists, and scan verification.
 - `features/ai_assistant/` — natural-language intent parsing and stock queries.
+
+## Atomic Commit Maximization Policy
+
+- **Maximal Atomic Commits**: Prioritize as many valid, meaningful commits as reasonably possible. Deconstruct each feature, refactoring, or bug fix into independent, well-scoped micro-tasks.
+- **Single Responsibility per Commit**: Each independent logical change must reside in its own commit whenever practical. Do not bundle unrelated modifications (e.g. documentation, model definition, UI, tests, configuration) into a single omnibus commit if they can be safely separated.
+- **No Meaningless or Artificial Commits**: Do not create empty, trivial, fake, or synthetic commits solely to inflate commit metrics. Every commit must contain actual, meaningful, coherent changes that can be verified and reasoned about.
+- **Strict Quality & Stability Baseline**: Never sacrifice software quality, build health, or architectural integrity for commit volume. Each commit must leave the codebase in a compilable, testable, and stable state.
+- **Conventional Commits Specification**: All commit messages must strictly adhere to the Conventional Commits specification (e.g., `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, `perf:`), using clear scopes and descriptive imperative summaries.
+- **Lifecycle per Micro-Task**: Execute the disciplined development lifecycle for every micro-task:
+  1. Implement the scoped micro-task changes.
+  2. Run relevant tests, linters, or analysis to verify correctness.
+  3. Review the git diff to ensure no extraneous files or unintentional changes are staged.
+  4. Create an atomic commit with an accurate conventional commit message.
+  5. Push the commit to the active feature branch.
+- **Branch Protection & Git Hygiene**:
+  - Never push commits directly to `main` or protected base branches.
+  - Work exclusively on designated feature or fix branches.
+  - Never force-push (`git push --force` or `--force-with-lease`) to shared or protected branches.
+  - Do not automatically merge branches without review or explicit approval.
+
