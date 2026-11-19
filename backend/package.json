@@ -21,6 +21,7 @@
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "test:db": "vitest run --config ./vitest.config.db.ts",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate"
   },
@@ -33,6 +34,7 @@
     "@prisma/client": "^6.19.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "jose": "^6.2.17",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

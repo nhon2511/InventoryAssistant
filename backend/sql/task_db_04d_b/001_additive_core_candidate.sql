@@ -7,6 +7,10 @@ SET LOCAL statement_timeout = '60s';
 -- Fail closed on a changed baseline; no IF NOT EXISTS masks drift.
 DO $$
 BEGIN
+  IF current_database() <> 'postgres'
+     OR current_setting('server_version_num')::integer / 10000 <> 17 THEN
+    RAISE EXCEPTION 'DB-04D-B expected Development database postgres on PostgreSQL 17';
+  END IF;
   IF to_regclass('public.stock_ledger') IS NOT NULL
      OR to_regclass('public.idempotency_keys') IS NOT NULL
      OR EXISTS (SELECT 1 FROM information_schema.columns
@@ -20,6 +24,20 @@ BEGIN
      OR to_regclass('public.locations') IS NULL
      OR to_regclass('public.warehouse_orders') IS NULL THEN
     RAISE EXCEPTION 'DB-04D-B baseline dependency missing';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_attribute a ON a.attrelid = c.conrelid
+      AND a.attnum = ANY(c.conkey)
+    WHERE c.conrelid = 'public.warehouse_orders'::regclass
+      AND c.confrelid = 'auth.users'::regclass AND c.contype = 'f'
+      AND a.attname = 'created_by'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_attribute
+    WHERE attrelid = 'public.inventory_items'::regclass
+      AND attname = 'id' AND atttypid = 'uuid'::regtype AND NOT attisdropped
+  ) THEN
+    RAISE EXCEPTION 'DB-04D-B expected auth FK or inventory UUID identity missing';
   END IF;
 END;
 $$;
