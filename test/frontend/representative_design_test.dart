@@ -147,6 +147,20 @@ void main() {
     expect(find.textContaining('Đã lưu phiếu nháp'), findsNothing);
     expect(find.text('12'), findsOneWidget);
   });
+  testWidgets('dashboard groups on-hand totals by unit', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repository = PreviewRepository();
+    addTearDown(repository.dispose);
+    await repository.signIn(email: 'admin@preview.local', password: 'test');
+    await tester.pumpWidget(harness(repository, const StockOverviewScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tồn thực có'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   for (final screen in [
     const StockOverviewScreen(),
     const InboundListScreen(),

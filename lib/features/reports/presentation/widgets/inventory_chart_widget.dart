@@ -2,12 +2,11 @@ import 'dart:math';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:smart_wms/app/theme/app_colors.dart';
 import 'package:smart_wms/features/reports/domain/entities/report_item.dart';
 
 /// Displays a bar chart showing stock quantities for the top products.
 ///
-/// Supports toggling between "Tuần" (weekly) and "Tháng" (monthly) views.
+/// Shows the highest-stock products and allows changing the number of rows.
 class InventoryChartWidget extends StatefulWidget {
   const InventoryChartWidget({required this.items, super.key});
 
@@ -17,10 +16,10 @@ class InventoryChartWidget extends StatefulWidget {
   State<InventoryChartWidget> createState() => _InventoryChartWidgetState();
 }
 
-enum _ChartPeriod { week, month }
+enum _ProductCount { seven, twelve }
 
 class _InventoryChartWidgetState extends State<InventoryChartWidget> {
-  _ChartPeriod _period = _ChartPeriod.week;
+  _ProductCount _productCount = _ProductCount.seven;
 
   @override
   Widget build(BuildContext context) {
@@ -35,24 +34,24 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
             LayoutBuilder(
               builder: (context, constraints) {
                 final title = Text(
-                  'Biến động tồn kho',
+                  'Tồn khả dụng theo mặt hàng',
                   style: Theme.of(context).textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold),
                 );
-                final period = SegmentedButton<_ChartPeriod>(
+                final productCount = SegmentedButton<_ProductCount>(
                   segments: const [
                     ButtonSegment(
-                      value: _ChartPeriod.week,
-                      label: Text('Tuần'),
+                      value: _ProductCount.seven,
+                      label: Text('7 mặt hàng'),
                     ),
                     ButtonSegment(
-                      value: _ChartPeriod.month,
-                      label: Text('Tháng'),
+                      value: _ProductCount.twelve,
+                      label: Text('12 mặt hàng'),
                     ),
                   ],
-                  selected: {_period},
+                  selected: {_productCount},
                   onSelectionChanged: (selected) {
-                    setState(() => _period = selected.first);
+                    setState(() => _productCount = selected.first);
                   },
                   style: const ButtonStyle(
                     visualDensity: VisualDensity.compact,
@@ -60,26 +59,36 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
                   ),
                 );
 
-                if (constraints.maxWidth < 520) {
+                if (constraints.maxWidth < 900) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [title, const SizedBox(height: 8), period],
+                    children: [title, const SizedBox(height: 8), productCount],
                   );
                 }
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [title, period],
+                  children: [title, productCount],
                 );
               },
             ),
             const SizedBox(height: 8),
+            Text(
+              'Xếp theo số lượng thực có, từ cao xuống thấp.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
             _buildLegend(),
             const SizedBox(height: 16),
             SizedBox(
               height: 220,
               child: displayItems.isEmpty
                   ? const Center(child: Text('Không có dữ liệu để hiển thị'))
-                  : BarChart(_buildChartData(displayItems)),
+                  : BarChart(
+                      _buildChartData(displayItems),
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : const Duration(milliseconds: 220),
+                    ),
             ),
           ],
         ),
@@ -90,7 +99,7 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
   List<ReportItem> _getDisplayItems() {
     final sorted = List<ReportItem>.from(widget.items)
       ..sort((a, b) => b.totalOnHand.compareTo(a.totalOnHand));
-    final count = _period == _ChartPeriod.week ? 7 : 12;
+    final count = _productCount == _ProductCount.seven ? 7 : 12;
     return sorted.take(min(count, sorted.length)).toList();
   }
 
@@ -100,9 +109,9 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
       spacing: 12,
       runSpacing: 8,
       children: [
-        _legendDot(AppColors.inStock, 'Tồn kho'),
-        _legendDot(AppColors.lowStock, 'Đã giữ'),
-        _legendDot(AppColors.info, 'Khả dụng'),
+        _legendDot(Theme.of(context).colorScheme.primary, 'Thực có'),
+        _legendDot(Theme.of(context).colorScheme.outline, 'Giữ chỗ'),
+        _legendDot(Theme.of(context).colorScheme.tertiary, 'Khả dụng'),
       ],
     );
   }
@@ -139,10 +148,13 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
         touchTooltipData: BarTouchTooltipData(
           getTooltipItem: (group, groupIndex, rod, rodIndex) {
             final item = items[groupIndex];
-            final labels = ['Tồn kho', 'Đã giữ', 'Khả dụng'];
+            final labels = ['Thực có', 'Giữ chỗ', 'Khả dụng'];
             return BarTooltipItem(
               '${item.productName}\n${labels[rodIndex]}: ${rod.toY.toInt()}',
-              const TextStyle(color: Colors.white, fontSize: 12),
+              TextStyle(
+                color: Theme.of(context).colorScheme.onInverseSurface,
+                fontSize: 12,
+              ),
             );
           },
         ),
@@ -201,7 +213,7 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
           barRods: [
             BarChartRodData(
               toY: item.totalOnHand.toDouble(),
-              color: AppColors.inStock,
+              color: Theme.of(context).colorScheme.primary,
               width: 8,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(4),
@@ -209,7 +221,7 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
             ),
             BarChartRodData(
               toY: item.totalReserved.toDouble(),
-              color: AppColors.lowStock,
+              color: Theme.of(context).colorScheme.outline,
               width: 8,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(4),
@@ -217,7 +229,7 @@ class _InventoryChartWidgetState extends State<InventoryChartWidget> {
             ),
             BarChartRodData(
               toY: item.totalAvailable.toDouble(),
-              color: AppColors.info,
+              color: Theme.of(context).colorScheme.tertiary,
               width: 8,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(4),

@@ -102,7 +102,12 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                       .copyWith(top: 0, bottom: 8),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('${filtered.length} sản phẩm'),
+                    child: Text(
+                      '${filtered.length} sản phẩm',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 ),
                 Expanded(
@@ -121,13 +126,37 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                           itemBuilder: (context, index) {
                             final product = filtered[index];
                             return ListTile(
-                              leading: const Icon(Icons.inventory_2_outlined),
-                              title: Text(product.name),
+                              minVerticalPadding: 12,
+                              leading: Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer,
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                child: Icon(
+                                  Icons.inventory_2_outlined,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
+                                ),
+                              ),
+                              title: Text(
+                                product.name,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                               subtitle: Text(
-                                '${product.sku} · ${product.unit}\nMã vạch: ${product.barcode}',
+                                'SKU ${product.sku} · ${product.unit}\nMã vạch ${product.barcode}',
                               ),
                               isThreeLine: true,
-                              trailing: const Icon(Icons.chevron_right),
+                              trailing: Icon(
+                                Icons.chevron_right,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
                               onTap: () =>
                                   context.go('/products/${product.id}'),
                             );
