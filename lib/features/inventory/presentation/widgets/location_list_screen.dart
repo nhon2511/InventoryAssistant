@@ -79,7 +79,15 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
                             .copyWith(top: 0, bottom: 8),
                         child: Align(
                           alignment: Alignment.centerLeft,
-                          child: Text('${filtered.length} vị trí'),
+                          child: Text(
+                            '${filtered.length} vị trí',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
                         ),
                       ),
                       Expanded(
@@ -102,12 +110,31 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
                                 itemBuilder: (context, index) {
                                   final l = filtered[index];
                                   return ListTile(
-                                    leading: const Icon(
-                                      Icons.location_on_outlined,
+                                    minVerticalPadding: 12,
+                                    leading: Container(
+                                      width: 42,
+                                      height: 42,
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primaryContainer,
+                                        borderRadius: BorderRadius.circular(9),
+                                      ),
+                                      child: Icon(
+                                        Icons.location_on_outlined,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimaryContainer,
+                                      ),
                                     ),
-                                    title: Text(l.displayLabel),
+                                    title: Text(
+                                      l.displayLabel,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
                                     subtitle: Text(
-                                      'Mã: ${l.locationBarcode}\nSức chứa: ${l.maxCapacityKg == null ? "Chưa cung cấp" : "${l.maxCapacityKg} kg"}',
+                                      'Mã vị trí ${l.locationBarcode}\nSức chứa ${l.maxCapacityKg == null ? "Chưa cung cấp" : "${l.maxCapacityKg} kg"}',
                                     ),
                                     isThreeLine: true,
                                     onTap: () => showDialog<void>(

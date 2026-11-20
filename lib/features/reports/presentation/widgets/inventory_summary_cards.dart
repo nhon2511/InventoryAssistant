@@ -25,7 +25,7 @@ class InventorySummaryCards extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _SummaryCard(
-                title: 'Tổng tồn kho',
+                title: 'Tổng số lượng (gộp đơn vị)',
                 value: '${summary.totalStockQuantity}',
                 icon: Icons.warehouse,
                 color: Theme.of(context).colorScheme.secondary,
@@ -75,25 +75,35 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(icon, color: color, size: 20),
+              ],
+            ),
             Text(
               value,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ],
         ),
