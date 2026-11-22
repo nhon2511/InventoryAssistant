@@ -4,6 +4,8 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { validateEnvironment } from './config/env.validation.js';
 import { HealthModule } from './health/health.module.js';
+import { InventoryModule } from './inventory/inventory.module.js';
+import { LocationsModule } from './locations/locations.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { ProductsModule } from './products/products.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -23,6 +25,8 @@ import { PrismaModule } from './prisma/prisma.module.js';
     }),
     PrismaModule,
     HealthModule,
+    InventoryModule,
+    LocationsModule,
     OrdersModule,
     ProductsModule,
   ],

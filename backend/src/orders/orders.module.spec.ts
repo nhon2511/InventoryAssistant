@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { OrdersModule } from './orders.module.js';
 import { OrdersController } from './orders.controller.js';
+import { OrdersService } from './orders.service.js';
 import { OrderConfirmationService } from '../inventory-contract/order-confirmation.service.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 
@@ -24,6 +25,7 @@ describe('OrdersModule', () => {
     }).compile();
 
     expect(moduleRef.get(OrdersController)).toBeDefined();
+    expect(moduleRef.get(OrdersService)).toBeDefined();
     expect(moduleRef.get(OrderConfirmationService)).toBeDefined();
   });
 });

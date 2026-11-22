@@ -2,19 +2,23 @@ import {
   Body,
   ConflictException,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   InternalServerErrorException,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -25,6 +29,11 @@ import { JwtAuthenticationGuard, type AuthenticatedRequest } from '../auth/authe
 import { RequireTrustedRoles, TrustedRolesGuard } from '../auth/trusted-roles.guard.js';
 import { OrderConfirmationService, type ConfirmationResult } from '../inventory-contract/order-confirmation.service.js';
 import { ConfirmOrderDto, ConfirmOrderParamsDto, ConfirmOrderResponseDto } from './dto/confirm-order.dto.js';
+import { CreateOrderDraftDto } from './dto/create-order-draft.dto.js';
+import { OrderParamDto, OrderQueryDto } from './dto/order-query.dto.js';
+import { OrderDetailResponseDto, OrderSummaryResponseDto } from './dto/order-response.dto.js';
+import { ReviewOrderDto } from './dto/review-order.dto.js';
+import { OrdersService } from './orders.service.js';
 
 @ApiTags('Orders')
 @ApiBearerAuth('JWT-auth')
@@ -33,7 +42,64 @@ import { ConfirmOrderDto, ConfirmOrderParamsDto, ConfirmOrderResponseDto } from 
 export class OrdersController {
   constructor(
     private readonly confirmationService: OrderConfirmationService,
+    private readonly ordersService: OrdersService,
   ) {}
+
+  @Get()
+  @RequireTrustedRoles('ADMIN', 'MANAGER', 'STAFF')
+  @ApiOperation({ summary: 'Tra cứu danh sách đơn hàng' })
+  @ApiOkResponse({ description: 'Danh sách đơn hàng.', type: [OrderSummaryResponseDto] })
+  @ApiUnauthorizedResponse({ description: 'Token không hợp lệ.' })
+  @ApiForbiddenResponse({ description: 'Cần quyền ADMIN, MANAGER hoặc STAFF.' })
+  async findAll(@Query() query: OrderQueryDto): Promise<OrderSummaryResponseDto[]> {
+    return this.ordersService.findAll(query);
+  }
+
+  @Get(':id')
+  @RequireTrustedRoles('ADMIN', 'MANAGER', 'STAFF')
+  @ApiOperation({ summary: 'Chi tiết đơn hàng theo UUID hoặc orderCode' })
+  @ApiOkResponse({ description: 'Thông tin chi tiết đơn hàng.', type: OrderDetailResponseDto })
+  @ApiNotFoundResponse({ description: 'Đơn hàng không tồn tại.' })
+  @ApiUnauthorizedResponse({ description: 'Token không hợp lệ.' })
+  @ApiForbiddenResponse({ description: 'Cần quyền ADMIN, MANAGER hoặc STAFF.' })
+  async findOne(@Param() params: OrderParamDto): Promise<OrderDetailResponseDto> {
+    return this.ordersService.findById(params.id);
+  }
+
+  @Post('draft')
+  @RequireTrustedRoles('ADMIN', 'MANAGER', 'STAFF')
+  @ApiOperation({ summary: 'Tạo phiếu nháp nguyên tử' })
+  @ApiCreatedResponse({ description: 'Phiếu nháp đã được tạo.', type: OrderDetailResponseDto })
+  @ApiNotFoundResponse({ description: 'Sản phẩm hoặc vị trí không tồn tại.' })
+  @ApiUnauthorizedResponse({ description: 'Token không hợp lệ.' })
+  @ApiForbiddenResponse({ description: 'Cần quyền ADMIN, MANAGER hoặc STAFF.' })
+  async createDraft(
+    @Body() dto: CreateOrderDraftDto,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<OrderDetailResponseDto> {
+    const actorId = req.verifiedPrincipal?.subjectId ?? null;
+    return this.ordersService.createDraft(dto, actorId);
+  }
+
+  @Post(':id/review')
+  @RequireTrustedRoles('ADMIN', 'MANAGER')
+  @ApiOperation({ summary: 'Duyệt hoặc hủy phiếu' })
+  @ApiOkResponse({ description: 'Phiếu đã được duyệt hoặc hủy.', type: OrderDetailResponseDto })
+  @ApiNotFoundResponse({ description: 'Đơn hàng không tồn tại.' })
+  @ApiConflictResponse({ description: 'Đơn hàng không ở trạng thái DRAFT.' })
+  @ApiUnauthorizedResponse({ description: 'Token không hợp lệ.' })
+  @ApiForbiddenResponse({ description: 'Cần quyền ADMIN hoặc MANAGER.' })
+  async reviewOrder(
+    @Param() params: OrderParamDto,
+    @Body() dto: ReviewOrderDto,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<OrderDetailResponseDto> {
+    const actorId = req.verifiedPrincipal?.subjectId;
+    if (!actorId) {
+      throw new InternalServerErrorException('Principal not resolved');
+    }
+    return this.ordersService.reviewOrder(params.id, dto.approve, actorId);
+  }
 
   @Post(':orderId/confirm')
   @HttpCode(HttpStatus.OK)
