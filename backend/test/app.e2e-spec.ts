@@ -8,6 +8,7 @@ import { AppService } from '../src/app.service.js';
 import { AllExceptionsFilter } from '../src/common/filters/http-exception.filter.js';
 import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor.js';
 import { HealthModule } from '../src/health/health.module.js';
+import { InventoryModule } from '../src/inventory/inventory.module.js';
 import { LocationsModule } from '../src/locations/locations.module.js';
 import { OrdersModule } from '../src/orders/orders.module.js';
 import { ProductsModule } from '../src/products/products.module.js';
@@ -30,6 +31,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
     }),
     PrismaModule,
     HealthModule,
+    InventoryModule,
     LocationsModule,
     OrdersModule,
     ProductsModule,
@@ -51,7 +53,17 @@ describe('Smart WMS Backend (e2e)', () => {
     onModuleInit: ReturnType<typeof vi.fn>;
     onModuleDestroy: ReturnType<typeof vi.fn>;
     sanitizeError: ReturnType<typeof vi.fn>;
-    inventoryItem: { updateMany: ReturnType<typeof vi.fn> };
+    inventoryItem: {
+      updateMany: ReturnType<typeof vi.fn>;
+      findMany: ReturnType<typeof vi.fn>;
+      findFirst: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
+      create: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+    };
+    product: {
+      findUnique: ReturnType<typeof vi.fn>;
+    };
     stockLedger: { create: ReturnType<typeof vi.fn> };
     idempotencyKey: { updateMany: ReturnType<typeof vi.fn> };
     warehouseOrder: {
@@ -81,7 +93,17 @@ describe('Smart WMS Backend (e2e)', () => {
       onModuleInit: vi.fn(),
       onModuleDestroy: vi.fn(),
       sanitizeError: vi.fn((e: unknown) => String(e)),
-      inventoryItem: { updateMany: vi.fn() },
+      inventoryItem: {
+        updateMany: vi.fn(),
+        findMany: vi.fn(),
+        findFirst: vi.fn(),
+        findUnique: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+      },
+      product: {
+        findUnique: vi.fn(),
+      },
       stockLedger: { create: vi.fn() },
       idempotencyKey: { updateMany: vi.fn() },
       warehouseOrder: {
@@ -251,6 +273,34 @@ describe('Smart WMS Backend (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/orders/INB-202611-0001/review')
       .send({ approve: true })
+      .expect(401);
+  });
+
+  it('POST /api/v1/inventory/receive requires authentication', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/inventory/receive')
+      .send({
+        productId: '550e8400-e29b-41d4-a716-446655440001',
+        locationId: '660e8400-e29b-41d4-a716-446655440001',
+        quantity: 10,
+      })
+      .expect(401);
+  });
+
+  it('POST /api/v1/inventory/ship requires authentication', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/inventory/ship')
+      .send({
+        productId: '550e8400-e29b-41d4-a716-446655440001',
+        locationId: '660e8400-e29b-41d4-a716-446655440001',
+        quantity: 5,
+      })
+      .expect(401);
+  });
+
+  it('GET /api/v1/inventory/stock requires authentication', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/inventory/stock')
       .expect(401);
   });
 

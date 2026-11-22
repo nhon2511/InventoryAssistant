@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { PrismaService } from './prisma/prisma.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { HealthModule } from './health/health.module.js';
+import { InventoryModule } from './inventory/inventory.module.js';
 import { LocationsModule } from './locations/locations.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { ProductsModule } from './products/products.module.js';
@@ -46,6 +47,7 @@ describe('AppModule', () => {
         }),
         PrismaModule,
         HealthModule,
+        InventoryModule,
         LocationsModule,
         OrdersModule,
         ProductsModule,
