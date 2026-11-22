@@ -5,6 +5,7 @@ import { OrderConfirmationService } from '../inventory-contract/order-confirmati
 import { PrismaOrderConfirmationAdapter } from '../inventory-contract/prisma-order-confirmation.adapter.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { OrdersController } from './orders.controller.js';
+import { OrdersService } from './orders.service.js';
 
 /** Token for the OrderConfirmationRunner dependency. */
 export const ORDER_CONFIRMATION_RUNNER = 'ORDER_CONFIRMATION_RUNNER';
@@ -13,6 +14,7 @@ export const ORDER_CONFIRMATION_RUNNER = 'ORDER_CONFIRMATION_RUNNER';
   imports: [AuthModule],
   controllers: [OrdersController],
   providers: [
+    OrdersService,
     // Prisma adapter as the OrderConfirmationRunner implementation.
     {
       provide: ORDER_CONFIRMATION_RUNNER,
@@ -33,5 +35,6 @@ export const ORDER_CONFIRMATION_RUNNER = 'ORDER_CONFIRMATION_RUNNER';
       inject: [ORDER_CONFIRMATION_RUNNER, VERIFIED_PRINCIPAL_PROVIDER],
     },
   ],
+  exports: [OrdersService],
 })
 export class OrdersModule {}

@@ -2,11 +2,13 @@ import {
   Body,
   ConflictException,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   InternalServerErrorException,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -15,6 +17,7 @@ import {
   ApiConflictResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -25,6 +28,9 @@ import { JwtAuthenticationGuard, type AuthenticatedRequest } from '../auth/authe
 import { RequireTrustedRoles, TrustedRolesGuard } from '../auth/trusted-roles.guard.js';
 import { OrderConfirmationService, type ConfirmationResult } from '../inventory-contract/order-confirmation.service.js';
 import { ConfirmOrderDto, ConfirmOrderParamsDto, ConfirmOrderResponseDto } from './dto/confirm-order.dto.js';
+import { OrderParamDto, OrderQueryDto } from './dto/order-query.dto.js';
+import { OrderDetailResponseDto, OrderSummaryResponseDto } from './dto/order-response.dto.js';
+import { OrdersService } from './orders.service.js';
 
 @ApiTags('Orders')
 @ApiBearerAuth('JWT-auth')
@@ -33,7 +39,29 @@ import { ConfirmOrderDto, ConfirmOrderParamsDto, ConfirmOrderResponseDto } from 
 export class OrdersController {
   constructor(
     private readonly confirmationService: OrderConfirmationService,
+    private readonly ordersService: OrdersService,
   ) {}
+
+  @Get()
+  @RequireTrustedRoles('ADMIN', 'MANAGER', 'STAFF')
+  @ApiOperation({ summary: 'Tra cứu danh sách đơn hàng' })
+  @ApiOkResponse({ description: 'Danh sách đơn hàng.', type: [OrderSummaryResponseDto] })
+  @ApiUnauthorizedResponse({ description: 'Token không hợp lệ.' })
+  @ApiForbiddenResponse({ description: 'Cần quyền ADMIN, MANAGER hoặc STAFF.' })
+  async findAll(@Query() query: OrderQueryDto): Promise<OrderSummaryResponseDto[]> {
+    return this.ordersService.findAll(query);
+  }
+
+  @Get(':id')
+  @RequireTrustedRoles('ADMIN', 'MANAGER', 'STAFF')
+  @ApiOperation({ summary: 'Chi tiết đơn hàng theo UUID hoặc orderCode' })
+  @ApiOkResponse({ description: 'Thông tin chi tiết đơn hàng.', type: OrderDetailResponseDto })
+  @ApiNotFoundResponse({ description: 'Đơn hàng không tồn tại.' })
+  @ApiUnauthorizedResponse({ description: 'Token không hợp lệ.' })
+  @ApiForbiddenResponse({ description: 'Cần quyền ADMIN, MANAGER hoặc STAFF.' })
+  async findOne(@Param() params: OrderParamDto): Promise<OrderDetailResponseDto> {
+    return this.ordersService.findById(params.id);
+  }
 
   @Post(':orderId/confirm')
   @HttpCode(HttpStatus.OK)

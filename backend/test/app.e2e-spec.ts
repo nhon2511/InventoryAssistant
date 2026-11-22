@@ -54,7 +54,13 @@ describe('Smart WMS Backend (e2e)', () => {
     inventoryItem: { updateMany: ReturnType<typeof vi.fn> };
     stockLedger: { create: ReturnType<typeof vi.fn> };
     idempotencyKey: { updateMany: ReturnType<typeof vi.fn> };
-    warehouseOrder: { updateMany: ReturnType<typeof vi.fn> };
+    warehouseOrder: {
+      updateMany: ReturnType<typeof vi.fn>;
+      findMany: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
+      create: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+    };
     location: {
       findMany: ReturnType<typeof vi.fn>;
       findUnique: ReturnType<typeof vi.fn>;
@@ -78,7 +84,13 @@ describe('Smart WMS Backend (e2e)', () => {
       inventoryItem: { updateMany: vi.fn() },
       stockLedger: { create: vi.fn() },
       idempotencyKey: { updateMany: vi.fn() },
-      warehouseOrder: { updateMany: vi.fn() },
+      warehouseOrder: {
+        updateMany: vi.fn(),
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+      },
       location: {
         findMany: vi.fn(),
         findUnique: vi.fn(),
@@ -205,6 +217,18 @@ describe('Smart WMS Backend (e2e)', () => {
         binCode: 'B-01',
         locationBarcode: 'LOC-ZA-A01-R01-B01',
       })
+      .expect(401);
+  });
+
+  it('GET /api/v1/orders requires authentication', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/orders')
+      .expect(401);
+  });
+
+  it('GET /api/v1/orders/:id requires authentication', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/orders/INB-202611-0001')
       .expect(401);
   });
 
