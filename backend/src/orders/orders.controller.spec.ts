@@ -43,6 +43,8 @@ describe('OrdersController', () => {
   let ordersServiceMock: {
     findAll: ReturnType<typeof vi.fn>;
     findById: ReturnType<typeof vi.fn>;
+    createDraft: ReturnType<typeof vi.fn>;
+    reviewOrder: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -50,6 +52,8 @@ describe('OrdersController', () => {
     ordersServiceMock = {
       findAll: vi.fn(),
       findById: vi.fn(),
+      createDraft: vi.fn(),
+      reviewOrder: vi.fn(),
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -99,6 +103,60 @@ describe('OrdersController', () => {
       ordersServiceMock.findById.mockRejectedValue(new NotFoundException('Order not found'));
 
       await expect(controller.findOne({ id: 'nonexistent' })).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('createDraft', () => {
+    it('creates draft order with authenticated user as createdBy', async () => {
+      ordersServiceMock.createDraft.mockResolvedValue(SAMPLE_ORDER);
+
+      const dto = {
+        type: 'INBOUND' as const,
+        items: [
+          {
+            productId: '550e8400-e29b-41d4-a716-446655440001',
+            expectedQuantity: 10,
+          },
+        ],
+      };
+
+      const result = await controller.createDraft(dto as never, makeRequest());
+
+      expect(result).toEqual(SAMPLE_ORDER);
+      expect(ordersServiceMock.createDraft).toHaveBeenCalledWith(
+        dto,
+        '550e8400-e29b-41d4-a716-446655440001',
+      );
+    });
+  });
+
+  describe('reviewOrder', () => {
+    it('reviews order successfully with approve = true', async () => {
+      const approvedOrder = { ...SAMPLE_ORDER, status: 'CONFIRMED' };
+      ordersServiceMock.reviewOrder.mockResolvedValue(approvedOrder);
+
+      const result = await controller.reviewOrder(
+        { id: SAMPLE_ORDER.id },
+        { approve: true },
+        makeRequest(),
+      );
+
+      expect(result).toEqual(approvedOrder);
+      expect(ordersServiceMock.reviewOrder).toHaveBeenCalledWith(
+        SAMPLE_ORDER.id,
+        true,
+        '550e8400-e29b-41d4-a716-446655440001',
+      );
+    });
+
+    it('throws InternalServerErrorException when principal is missing', async () => {
+      await expect(
+        controller.reviewOrder(
+          { id: SAMPLE_ORDER.id },
+          { approve: true },
+          makeRequest({ verifiedPrincipal: undefined }),
+        ),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 

@@ -232,6 +232,28 @@ describe('Smart WMS Backend (e2e)', () => {
       .expect(401);
   });
 
+  it('POST /api/v1/orders/draft requires authentication', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/orders/draft')
+      .send({
+        type: 'INBOUND',
+        items: [
+          {
+            productId: '550e8400-e29b-41d4-a716-446655440001',
+            expectedQuantity: 5,
+          },
+        ],
+      })
+      .expect(401);
+  });
+
+  it('POST /api/v1/orders/:id/review requires authentication', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/orders/INB-202611-0001/review')
+      .send({ approve: true })
+      .expect(401);
+  });
+
   it('GET /api/v1/non-existent-route should return 404 with standard error filter', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/v1/non-existent-route')

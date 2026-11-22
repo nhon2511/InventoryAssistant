@@ -1,16 +1,35 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderStatusEnum, OrderTypeEnum } from './dto/order-query.dto.js';
 import { OrdersService } from './orders.service.js';
 
 function makePrisma() {
+  const warehouseOrder = {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+  };
+  const product = {
+    findMany: vi.fn(),
+  };
+  const location = {
+    findMany: vi.fn(),
+  };
+
+  const tx = {
+    warehouseOrder,
+    product,
+    location,
+  };
+
   return {
-    warehouseOrder: {
-      findMany: vi.fn(),
-      findUnique: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-    },
+    warehouseOrder,
+    product,
+    location,
+    $transaction: vi.fn((fn: (innerTx: typeof tx) => unknown) => fn(tx)),
   };
 }
 
@@ -164,6 +183,124 @@ describe('OrdersService', () => {
       prisma.warehouseOrder.findUnique.mockResolvedValue(null);
 
       await expect(service.findById('nonexistent')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('createDraft', () => {
+    const draftDto = {
+      type: OrderTypeEnum.INBOUND,
+      note: 'Phiếu nhập nháp',
+      requestId: 'req-001',
+      items: [
+        {
+          productId: '550e8400-e29b-41d4-a716-446655440001',
+          locationId: '660e8400-e29b-41d4-a716-446655440001',
+          expectedQuantity: 20,
+          lotNumber: 'LOT-A',
+          expiryDate: '2027-12-31',
+        },
+      ],
+    };
+
+    it('creates draft order atomically when product and location exist', async () => {
+      prisma.product.findMany.mockResolvedValue([{ id: draftDto.items[0].productId }]);
+      prisma.location.findMany.mockResolvedValue([{ id: draftDto.items[0].locationId }]);
+      prisma.warehouseOrder.findFirst.mockResolvedValue({ orderCode: 'INB-202611-0003' });
+      prisma.warehouseOrder.create.mockResolvedValue(SAMPLE_ORDER_DETAIL);
+
+      const result = await service.createDraft(draftDto, 'user-actor-id');
+
+      expect(result).toEqual(SAMPLE_ORDER_DETAIL);
+      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(prisma.warehouseOrder.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            orderCode: expect.stringMatching(/^INB-\d{6}-0004$/),
+            type: 'INBOUND',
+            status: 'DRAFT',
+            createdBy: 'user-actor-id',
+          }),
+        }),
+      );
+    });
+
+    it('throws NotFoundException when product does not exist', async () => {
+      prisma.product.findMany.mockResolvedValue([]);
+
+      await expect(service.createDraft(draftDto, 'user-actor-id')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prisma.warehouseOrder.create).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when location does not exist', async () => {
+      prisma.product.findMany.mockResolvedValue([{ id: draftDto.items[0].productId }]);
+      prisma.location.findMany.mockResolvedValue([]);
+
+      await expect(service.createDraft(draftDto, 'user-actor-id')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prisma.warehouseOrder.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reviewOrder', () => {
+    it('approves draft order and transitions status to CONFIRMED', async () => {
+      prisma.warehouseOrder.findUnique
+        .mockResolvedValueOnce(SAMPLE_ORDER)
+        .mockResolvedValueOnce({ ...SAMPLE_ORDER_DETAIL, status: 'CONFIRMED', approvedBy: 'approver-id' });
+      prisma.warehouseOrder.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.reviewOrder(SAMPLE_ORDER.id, true, 'approver-id');
+
+      expect(result.status).toBe('CONFIRMED');
+      expect(prisma.warehouseOrder.updateMany).toHaveBeenCalledWith({
+        where: { id: SAMPLE_ORDER.id, status: 'DRAFT' },
+        data: { status: 'CONFIRMED', approvedBy: 'approver-id' },
+      });
+    });
+
+    it('rejects/cancels draft order and transitions status to CANCELLED', async () => {
+      prisma.warehouseOrder.findUnique
+        .mockResolvedValueOnce(SAMPLE_ORDER)
+        .mockResolvedValueOnce({ ...SAMPLE_ORDER_DETAIL, status: 'CANCELLED', approvedBy: null });
+      prisma.warehouseOrder.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.reviewOrder(SAMPLE_ORDER.id, false, 'approver-id');
+
+      expect(result.status).toBe('CANCELLED');
+      expect(prisma.warehouseOrder.updateMany).toHaveBeenCalledWith({
+        where: { id: SAMPLE_ORDER.id, status: 'DRAFT' },
+        data: { status: 'CANCELLED', approvedBy: null },
+      });
+    });
+
+    it('throws NotFoundException when order does not exist', async () => {
+      prisma.warehouseOrder.findUnique.mockResolvedValue(null);
+
+      await expect(service.reviewOrder('nonexistent', true, 'approver-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('throws ConflictException when order is not in DRAFT status', async () => {
+      prisma.warehouseOrder.findUnique.mockResolvedValue({
+        ...SAMPLE_ORDER,
+        status: 'CONFIRMED',
+      });
+
+      await expect(service.reviewOrder(SAMPLE_ORDER.id, true, 'approver-id')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('throws ConflictException when compare-and-set detects race condition', async () => {
+      prisma.warehouseOrder.findUnique.mockResolvedValue(SAMPLE_ORDER);
+      prisma.warehouseOrder.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.reviewOrder(SAMPLE_ORDER.id, true, 'approver-id')).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 });
