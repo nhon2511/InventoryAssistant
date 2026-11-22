@@ -8,6 +8,7 @@ import { AppService } from '../src/app.service.js';
 import { AllExceptionsFilter } from '../src/common/filters/http-exception.filter.js';
 import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor.js';
 import { HealthModule } from '../src/health/health.module.js';
+import { LocationsModule } from '../src/locations/locations.module.js';
 import { OrdersModule } from '../src/orders/orders.module.js';
 import { ProductsModule } from '../src/products/products.module.js';
 import { PrismaModule } from '../src/prisma/prisma.module.js';
@@ -29,6 +30,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
     }),
     PrismaModule,
     HealthModule,
+    LocationsModule,
     OrdersModule,
     ProductsModule,
   ],
@@ -53,6 +55,13 @@ describe('Smart WMS Backend (e2e)', () => {
     stockLedger: { create: ReturnType<typeof vi.fn> };
     idempotencyKey: { updateMany: ReturnType<typeof vi.fn> };
     warehouseOrder: { updateMany: ReturnType<typeof vi.fn> };
+    location: {
+      findMany: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
+      create: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+      delete: ReturnType<typeof vi.fn>;
+    };
   };
 
   beforeEach(async () => {
@@ -70,6 +79,13 @@ describe('Smart WMS Backend (e2e)', () => {
       stockLedger: { create: vi.fn() },
       idempotencyKey: { updateMany: vi.fn() },
       warehouseOrder: { updateMany: vi.fn() },
+      location: {
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -170,6 +186,25 @@ describe('Smart WMS Backend (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/products')
       .send({ name: 'Test', sku: 'SKU-1', barcode: 'BC-1' })
+      .expect(401);
+  });
+
+  it('GET /api/v1/locations requires authentication', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/locations')
+      .expect(401);
+  });
+
+  it('POST /api/v1/locations requires authentication', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/locations')
+      .send({
+        zoneCode: 'Z-A',
+        aisleCode: 'A-01',
+        rackCode: 'R-01',
+        binCode: 'B-01',
+        locationBarcode: 'LOC-ZA-A01-R01-B01',
+      })
       .expect(401);
   });
 

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { PrismaService } from './prisma/prisma.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { HealthModule } from './health/health.module.js';
+import { LocationsModule } from './locations/locations.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { ProductsModule } from './products/products.module.js';
 import { AppController } from './app.controller.js';
@@ -28,6 +29,7 @@ describe('AppModule', () => {
       stockLedger: { create: vi.fn() },
       idempotencyKey: { updateMany: vi.fn() },
       warehouseOrder: { updateMany: vi.fn() },
+      location: { findMany: vi.fn() },
     };
 
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -44,6 +46,7 @@ describe('AppModule', () => {
         }),
         PrismaModule,
         HealthModule,
+        LocationsModule,
         OrdersModule,
         ProductsModule,
       ],
