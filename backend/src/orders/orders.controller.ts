@@ -25,13 +25,29 @@ import {
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
-import { JwtAuthenticationGuard, type AuthenticatedRequest } from '../auth/authentication.guard.js';
-import { RequireTrustedRoles, TrustedRolesGuard } from '../auth/trusted-roles.guard.js';
-import { OrderConfirmationService, type ConfirmationResult } from '../inventory-contract/order-confirmation.service.js';
-import { ConfirmOrderDto, ConfirmOrderParamsDto, ConfirmOrderResponseDto } from './dto/confirm-order.dto.js';
+import {
+  JwtAuthenticationGuard,
+  type AuthenticatedRequest,
+} from '../auth/authentication.guard.js';
+import {
+  RequireTrustedRoles,
+  TrustedRolesGuard,
+} from '../auth/trusted-roles.guard.js';
+import {
+  OrderConfirmationService,
+  type ConfirmationResult,
+} from '../inventory-contract/order-confirmation.service.js';
+import {
+  ConfirmOrderDto,
+  ConfirmOrderParamsDto,
+  ConfirmOrderResponseDto,
+} from './dto/confirm-order.dto.js';
 import { CreateOrderDraftDto } from './dto/create-order-draft.dto.js';
 import { OrderParamDto, OrderQueryDto } from './dto/order-query.dto.js';
-import { OrderDetailResponseDto, OrderSummaryResponseDto } from './dto/order-response.dto.js';
+import {
+  OrderDetailResponseDto,
+  OrderSummaryResponseDto,
+} from './dto/order-response.dto.js';
 import { ReviewOrderDto } from './dto/review-order.dto.js';
 import { OrdersService } from './orders.service.js';
 
@@ -48,28 +64,57 @@ export class OrdersController {
   @Get()
   @RequireTrustedRoles('ADMIN', 'MANAGER', 'STAFF')
   @ApiOperation({ summary: 'Tra cứu danh sách đơn hàng' })
-  @ApiOkResponse({ description: 'Danh sách đơn hàng.', type: [OrderSummaryResponseDto] })
+  @ApiOkResponse({
+    description: 'Danh sách đơn hàng.',
+    type: [OrderSummaryResponseDto],
+  })
   @ApiUnauthorizedResponse({ description: 'Token không hợp lệ.' })
   @ApiForbiddenResponse({ description: 'Cần quyền ADMIN, MANAGER hoặc STAFF.' })
-  async findAll(@Query() query: OrderQueryDto): Promise<OrderSummaryResponseDto[]> {
-    return this.ordersService.findAll(query);
+  async findAll(
+    @Query() query: OrderQueryDto,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<OrderSummaryResponseDto[]> {
+    const principal = req.verifiedPrincipal;
+    if (!principal?.subjectId || !principal.trustedRole)
+      throw new InternalServerErrorException('Principal not resolved');
+    return this.ordersService.findAll(
+      query,
+      principal.subjectId,
+      principal.trustedRole,
+    );
   }
 
   @Get(':id')
   @RequireTrustedRoles('ADMIN', 'MANAGER', 'STAFF')
   @ApiOperation({ summary: 'Chi tiết đơn hàng theo UUID hoặc orderCode' })
-  @ApiOkResponse({ description: 'Thông tin chi tiết đơn hàng.', type: OrderDetailResponseDto })
+  @ApiOkResponse({
+    description: 'Thông tin chi tiết đơn hàng.',
+    type: OrderDetailResponseDto,
+  })
   @ApiNotFoundResponse({ description: 'Đơn hàng không tồn tại.' })
   @ApiUnauthorizedResponse({ description: 'Token không hợp lệ.' })
   @ApiForbiddenResponse({ description: 'Cần quyền ADMIN, MANAGER hoặc STAFF.' })
-  async findOne(@Param() params: OrderParamDto): Promise<OrderDetailResponseDto> {
-    return this.ordersService.findById(params.id);
+  async findOne(
+    @Param() params: OrderParamDto,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<OrderDetailResponseDto> {
+    const principal = req.verifiedPrincipal;
+    if (!principal?.subjectId || !principal.trustedRole)
+      throw new InternalServerErrorException('Principal not resolved');
+    return this.ordersService.findById(
+      params.id,
+      principal.subjectId,
+      principal.trustedRole,
+    );
   }
 
   @Post('draft')
   @RequireTrustedRoles('ADMIN', 'MANAGER', 'STAFF')
   @ApiOperation({ summary: 'Tạo phiếu nháp nguyên tử' })
-  @ApiCreatedResponse({ description: 'Phiếu nháp đã được tạo.', type: OrderDetailResponseDto })
+  @ApiCreatedResponse({
+    description: 'Phiếu nháp đã được tạo.',
+    type: OrderDetailResponseDto,
+  })
   @ApiNotFoundResponse({ description: 'Sản phẩm hoặc vị trí không tồn tại.' })
   @ApiUnauthorizedResponse({ description: 'Token không hợp lệ.' })
   @ApiForbiddenResponse({ description: 'Cần quyền ADMIN, MANAGER hoặc STAFF.' })
@@ -84,7 +129,10 @@ export class OrdersController {
   @Post(':id/review')
   @RequireTrustedRoles('ADMIN', 'MANAGER')
   @ApiOperation({ summary: 'Duyệt hoặc hủy phiếu' })
-  @ApiOkResponse({ description: 'Phiếu đã được duyệt hoặc hủy.', type: OrderDetailResponseDto })
+  @ApiOkResponse({
+    description: 'Phiếu đã được duyệt hoặc hủy.',
+    type: OrderDetailResponseDto,
+  })
   @ApiNotFoundResponse({ description: 'Đơn hàng không tồn tại.' })
   @ApiConflictResponse({ description: 'Đơn hàng không ở trạng thái DRAFT.' })
   @ApiUnauthorizedResponse({ description: 'Token không hợp lệ.' })
@@ -107,9 +155,9 @@ export class OrdersController {
   @ApiOperation({
     summary: 'Xác nhận đơn hàng nhập/xuất kho',
     description:
-      'Xác nhận đơn hàng DRAFT, cập nhật tồn kho và ghi sổ cái. '
-      + 'Yêu cầu Bearer JWT token với vai trò ADMIN hoặc MANAGER. '
-      + 'Idempotency key đảm bảo gọi trùng an toàn.',
+      'Xác nhận đơn hàng CONFIRMED, cập nhật tồn kho và ghi sổ cái. ' +
+      'Yêu cầu Bearer JWT token với vai trò ADMIN hoặc MANAGER. ' +
+      'Idempotency key đảm bảo gọi trùng an toàn.',
   })
   @ApiResponse({
     status: 200,
@@ -117,10 +165,17 @@ export class OrdersController {
     type: ConfirmOrderResponseDto,
   })
   @ApiUnauthorizedResponse({ description: 'Token không hợp lệ hoặc hết hạn.' })
-  @ApiForbiddenResponse({ description: 'Vai trò không đủ quyền (cần ADMIN hoặc MANAGER).' })
+  @ApiForbiddenResponse({
+    description: 'Vai trò không đủ quyền (cần ADMIN hoặc MANAGER).',
+  })
   @ApiNotFoundResponse({ description: 'Đơn hàng không tồn tại.' })
-  @ApiConflictResponse({ description: 'Idempotency key đã được dùng với nội dung khác.' })
-  @ApiUnprocessableEntityResponse({ description: 'Đơn hàng không ở trạng thái DRAFT hoặc dữ liệu không hợp lệ.' })
+  @ApiConflictResponse({
+    description: 'Idempotency key đã được dùng với nội dung khác.',
+  })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'Đơn hàng không ở trạng thái CONFIRMED hoặc dữ liệu không hợp lệ.',
+  })
   async confirm(
     @Param() params: ConfirmOrderParamsDto,
     @Body() body: ConfirmOrderDto,
@@ -134,9 +189,10 @@ export class OrdersController {
     // Build a minimal bearer token string from the original request
     // to pass to the service (which re-verifies it internally).
     const authHeader = req.headers.authorization;
-    const token = typeof authHeader === 'string'
-      ? authHeader.replace(/^Bearer\s+/i, '')
-      : '';
+    const token =
+      typeof authHeader === 'string'
+        ? authHeader.replace(/^Bearer\s+/i, '')
+        : '';
 
     let result: ConfirmationResult;
     try {
@@ -147,13 +203,22 @@ export class OrdersController {
       });
     } catch (error) {
       // Map domain errors to HTTP status codes.
-      const message = error instanceof Error ? error.message : 'Confirmation failed';
-      if (message.includes('Order not found') || message.includes('ownership mismatch')) {
+      const message =
+        error instanceof Error ? error.message : 'Confirmation failed';
+      if (
+        message.includes('Order not found') ||
+        message.includes('ownership mismatch')
+      ) {
         throw new ConflictException(message);
       }
-      if (message.includes('cannot be confirmed') || message.includes('Invalid') ||
-          message.includes('no lines') || message.includes('Missing or ambiguous') ||
-          message.includes('identity mismatch') || message.includes('Insufficient')) {
+      if (
+        message.includes('cannot be confirmed') ||
+        message.includes('Invalid') ||
+        message.includes('no lines') ||
+        message.includes('Missing or ambiguous') ||
+        message.includes('identity mismatch') ||
+        message.includes('Insufficient')
+      ) {
         throw new ConflictException(message);
       }
       throw new InternalServerErrorException('Order confirmation failed');
@@ -161,7 +226,9 @@ export class OrdersController {
 
     switch (result.kind) {
       case 'conflict':
-        throw new ConflictException('Idempotency key conflict: same key used with different request');
+        throw new ConflictException(
+          'Idempotency key conflict: same key used with different request',
+        );
       case 'in_progress':
         throw new ConflictException('Confirmation already in progress');
       case 'expired':

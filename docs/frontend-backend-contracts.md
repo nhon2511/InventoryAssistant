@@ -94,7 +94,7 @@ File: `lib/features/orders/domain/repositories/order_workflow_repository.dart`.
 - Server kiểm tra sản phẩm/vị trí tồn tại, số lượng, quyền, đơn vị, requestId và concurrency.
 - FE cộng gộp dòng xuất trùng product/location, so với quantityOnHand − quantityReserved nếu có snapshot. Server phải kiểm tra lại với lock/transaction; FE không thay thế kiểm tra này.
 - `review(orderId, expectedStatus, approve, reviewerId)`: compare-and-set trạng thái DRAFT → CONFIRMED hoặc CANCELLED; ADMIN/MANAGER; xác thực reviewer từ session; audit. Không hàm ý tồn đã thay đổi.
-- Production `PendingOrderWorkflowRepository` không gọi API giả.
+- Production từ CP4 dùng NestJS qua `NestOrderWorkflowRepository`; preview vẫn dùng fixture trong bộ nhớ.
 - Cần thỏa thuận trạng thái từ chối riêng nếu nghiệp vụ muốn phân biệt CANCELLED với REJECTED; FE hiện chỉ dùng enum sẵn có.
 
 ### Contract còn cần thỏa thuận trước tích hợp
@@ -107,6 +107,20 @@ File: `lib/features/orders/domain/repositories/order_workflow_repository.dart`.
 6. Phân trang, lọc phía server và ownership scope cho danh sách lớn; FE hiện tìm/lọc trên dữ liệu đã nhận.
 7. NLU draft: single-line `Map<String,String>` hiện hỗ trợ product_id/sku/barcode/product_name, location_id/location_barcode/location, quantity, note; intent create_inbound_draft/create_outbound_draft hoặc create_order với type rõ. Không đoán sản phẩm/vị trí khi kết quả không duy nhất. Multi-line, lot, expiry và đơn vị cần contract typed mở rộng.
 8. Đăng ký cần kiểm thử chế độ yêu cầu xác minh email; auth repository hiện trả Profile, chưa có state riêng cho chờ xác minh.
+
+## CP4 — hợp đồng phiếu nhập/xuất (27/11/2026)
+
+| Bước | Trạng thái trước | Trạng thái sau | API và tác động |
+|---|---|---|---|
+| Tạo nháp | Chưa có | DRAFT | `POST /api/v1/orders/draft`, tạo header cùng nhiều dòng; `actualQuantity=0`, chưa đổi tồn. |
+| Duyệt | DRAFT | CONFIRMED | `POST /api/v1/orders/:id/review` với `approve=true`; gán người duyệt từ JWT. |
+| Từ chối/hủy | DRAFT | CANCELLED | Cùng API với `approve=false`; trạng thái cuối, chưa đổi tồn. |
+| Xác nhận nhập/xuất | CONFIRMED | COMPLETED | API confirm hiện hữu được căn chỉnh điều kiện trạng thái; chưa nối Flutter ở CP4. |
+
+- `GET /api/v1/orders?type=INBOUND|OUTBOUND` và `GET /api/v1/orders/:id` trả header **và items**. Danh sách STAFF được server giới hạn theo `createdBy` từ JWT; ADMIN/MANAGER có thể xem toàn bộ. Client tiếp tục lọc để phù hợp UI, không thay thế kiểm soát server.
+- `requestId` là UUID bắt buộc và được dùng làm order ID để retry cùng yêu cầu không tạo phiếu thứ hai. Replay chỉ trả phiếu cũ khi actor, type, note và các dòng khớp; cùng ID với nội dung khác trả 409. Form giữ ID trong cùng phiên form khi request lỗi. Actor/reviewer gửi từ client không được adapter Nest sử dụng.
+- `review` chỉ chấp nhận DRAFT và dùng cập nhật có điều kiện; request sai trạng thái hoặc tranh chấp đồng thời trả 409. Bước confirm chỉ chấp nhận CONFIRMED. API confirm vẫn cần số lượng thực tế dương, trong khi draft tạo `actualQuantity=0`; việc thu thập/cập nhật số lượng thực tế và kiểm chứng stock ledger thuộc CP5, nên CP4 không tuyên bố luồng xác nhận đã chạy end to end.
+- List hiện chưa có phân trang/cursor/total; lọc tìm kiếm trong UI áp dụng trên tập đã tải. Kết quả test CP4 dùng mock/offline; chưa xác minh project Supabase thật hoặc Android device.
 
 ## Báo cáo và thiết bị
 

@@ -34,7 +34,7 @@ void main() {
   setUp(() => repository = PreviewRepository());
   tearDown(() => repository.dispose());
   test('staff list and detail cannot expose another user order', () async {
-    final usecase = ReadOrdersUseCase(repository, repository);
+    final usecase = ReadOrdersUseCase(repository);
     final orders = (await usecase.list(
       OrderType.inbound,
       staff,

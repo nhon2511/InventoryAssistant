@@ -496,6 +496,11 @@ class PreviewRepository
   @override
   FutureEither<List<WarehouseOrder>> getOutboundOrders() async =>
       Right(orders.where((o) => o.type == OrderType.outbound).toList());
+  @override
+  FutureEither<List<WarehouseOrder>> list(OrderType type) async =>
+      Right(orders.where((o) => o.type == type).toList());
+  @override
+  FutureEither<WarehouseOrder> detail(String id) => _order(id);
   FutureEither<WarehouseOrder> _order(String id) async {
     final o = orders.where((o) => o.id == id).firstOrNull;
     return o == null ? const Left(missing) : Right(o);

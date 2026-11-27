@@ -16,7 +16,7 @@ function fixture() {
     sql.push(statement);
     if (statement.includes('set_config')) return [{}];
     if (statement.includes('INSERT INTO public.idempotency_keys')) return [{ scope_id: actor }];
-    if (statement.includes('FROM public.warehouse_orders')) return [{ id: orderId, type: 'OUTBOUND', status: 'DRAFT', createdBy: actor }];
+    if (statement.includes('FROM public.warehouse_orders')) return [{ id: orderId, type: 'OUTBOUND', status: 'CONFIRMED', createdBy: actor }];
     if (statement.includes('FROM public.warehouse_order_items')) return [{
       id: '00000000-0000-4000-8000-000000000006', productId: product, locationId: location,
       lotNumber: null, expiryDate: null, expectedQuantity: 2, actualQuantity: 2,
@@ -43,7 +43,7 @@ describe('unwired Prisma confirmation adapter (SQL-shaped mocks)', () => {
     await f.adapter.transaction(async (tx) => {
       await tx.claimOrLock({ scopeId: actor, key: 'key', method: 'POST', path: '/orders/x', hash: 'a'.repeat(64),
         now: new Date(), expiresAt: new Date(Date.now() + 60_000) });
-      expect(await tx.lockOrder(orderId)).toMatchObject({ status: 'DRAFT' });
+      expect(await tx.lockOrder(orderId)).toMatchObject({ status: 'CONFIRMED' });
       expect(await tx.loadLines(orderId)).toHaveLength(1);
       expect(await tx.lockInventoryByIdentity(product, location, null)).toHaveLength(1);
       await tx.updateOnHand(itemId, 3);
@@ -61,7 +61,7 @@ describe('unwired Prisma confirmation adapter (SQL-shaped mocks)', () => {
     expect(f.sql.some((s) => s.includes('IS NOT DISTINCT FROM') && s.includes('ORDER BY id FOR UPDATE'))).toBe(true);
     expect(f.sql.join(' ')).not.toContain(orderId);
     expect(f.updateStock).toHaveBeenCalledWith({ where: { id: itemId }, data: { quantityOnHand: 3 } });
-    expect(f.updateOrder).toHaveBeenCalledWith({ where: { id: orderId, type: 'OUTBOUND', status: 'DRAFT' },
+    expect(f.updateOrder).toHaveBeenCalledWith({ where: { id: orderId, type: 'OUTBOUND', status: 'CONFIRMED' },
       data: { status: 'COMPLETED' } });
     expect(f.ledger).toHaveBeenCalledTimes(1);
     expect(f.completeKey).toHaveBeenCalledTimes(1);

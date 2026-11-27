@@ -96,7 +96,7 @@ export class OrderConfirmationService {
       const order = await tx.lockOrder(input.orderId);
       // Even privileged roles cannot bypass ownership until a separate policy is approved.
       if (order.id !== input.orderId || order.createdBy !== principal.subjectId) throw new Error('Order ownership mismatch');
-      if (order.type !== input.type || order.status !== 'DRAFT') throw new Error('Order cannot be confirmed');
+      if (order.type !== input.type || order.status !== 'CONFIRMED') throw new Error('Order cannot be confirmed');
       const lines = await tx.loadLines(order.id);
       if (lines.length === 0) throw new Error('Order has no lines');
       const sorted = [...lines].sort((a, b) => {

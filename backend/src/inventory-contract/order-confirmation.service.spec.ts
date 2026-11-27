@@ -25,7 +25,7 @@ const input = (type: ConfirmationType = 'OUTBOUND', key = 'confirmation-1') =>
   ({ orderId, type, idempotencyKey: key });
 
 class FakeDb implements OrderConfirmationRunner {
-  status = 'DRAFT';
+  status = 'CONFIRMED';
   type: ConfirmationType = 'OUTBOUND';
   createdBy: string | null = actor;
   balance = 10;
@@ -76,7 +76,7 @@ class FakeDb implements OrderConfirmationRunner {
       lockInventory: async () => { throw new Error('unexpected direct lookup'); },
       updateOnHand: async (_id, next) => { step('update'); balance = next; },
       appendLedger: async (entry) => { step('ledger'); ledger.push({ delta: entry.delta, balance: entry.balance, orderId: entry.orderId }); },
-      completeOrder: async () => { step('completeOrder'); if (status !== 'DRAFT') throw new Error('state changed'); status = 'COMPLETED'; },
+      completeOrder: async () => { step('completeOrder'); if (status !== 'CONFIRMED') throw new Error('state changed'); status = 'COMPLETED'; },
       completeClaim: async (claim) => {
         step('completeClaim');
         if (!record) throw new Error('missing claim');
@@ -138,12 +138,14 @@ describe('offline order confirmation transaction', () => {
     await expect(service.confirm('token', input())).rejects.toThrow('Order cannot be confirmed');
     db.type = 'OUTBOUND'; db.status = 'COMPLETED';
     await expect(service.confirm('token', input())).rejects.toThrow('Order cannot be confirmed');
-    db.status = 'DRAFT'; db.createdBy = null;
+    db.status = 'DRAFT';
+    await expect(service.confirm('token', input())).rejects.toThrow('Order cannot be confirmed');
+    db.status = 'CONFIRMED'; db.createdBy = null;
     await expect(service.confirm('token', input())).rejects.toThrow('ownership');
     expect(db.ledger).toHaveLength(0);
     verifyAccessToken.mockRejectedValueOnce(new Error('invalid JWT'));
     await expect(service.confirm('invalid', input())).rejects.toThrow('invalid JWT');
-    expect(db.calls.filter((call) => call === 'claim')).toHaveLength(3);
+    expect(db.calls.filter((call) => call === 'claim')).toHaveLength(4);
     const denied = fixture();
     denied.verifyAccessToken.mockResolvedValueOnce({ ...principal, trustedRole: undefined });
     await expect(denied.service.confirm('token', input())).rejects.toThrow('Trusted confirmation authority');
@@ -173,7 +175,7 @@ describe('offline order confirmation transaction', () => {
     db.failAt = 'completeOrder';
     await expect(service.confirm('token', input())).rejects.toThrow('completeOrder failed');
     expect(db.balance).toBe(10);
-    expect(db.status).toBe('DRAFT');
+    expect(db.status).toBe('CONFIRMED');
     expect(db.ledger).toHaveLength(0);
     expect(db.record).toBeNull();
   });
@@ -205,7 +207,7 @@ describe('offline order confirmation transaction', () => {
     failing.db.failAt = 'ledger';
     await expect(failing.service.confirm('token', input())).rejects.toThrow('ledger failed');
     expect(failing.db.balance).toBe(10);
-    expect(failing.db.status).toBe('DRAFT');
+    expect(failing.db.status).toBe('CONFIRMED');
     expect(failing.db.ledger).toHaveLength(0);
   });
 

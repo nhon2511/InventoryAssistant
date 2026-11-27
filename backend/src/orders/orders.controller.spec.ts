@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Test } from '@nestjs/testing';
-import { ConflictException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { OrdersController } from './orders.controller.js';
 import { OrdersService } from './orders.service.js';
 import { OrderConfirmationService } from '../inventory-contract/order-confirmation.service.js';
@@ -9,7 +13,9 @@ import { ConfirmationTypeDto } from './dto/confirm-order.dto.js';
 import { VERIFIED_PRINCIPAL_PROVIDER } from '../inventory-contract/inventory-command.service.js';
 import { Reflector } from '@nestjs/core';
 
-function makeRequest(overrides?: Partial<AuthenticatedRequest>): AuthenticatedRequest {
+function makeRequest(
+  overrides?: Partial<AuthenticatedRequest>,
+): AuthenticatedRequest {
   return {
     headers: { authorization: 'Bearer test.jwt.token' },
     verifiedPrincipal: {
@@ -82,10 +88,20 @@ describe('OrdersController', () => {
     it('returns orders list matching query', async () => {
       ordersServiceMock.findAll.mockResolvedValue([SAMPLE_ORDER]);
 
-      const result = await controller.findAll({});
+      const result = await controller.findAll({}, makeRequest());
 
       expect(result).toEqual([SAMPLE_ORDER]);
-      expect(ordersServiceMock.findAll).toHaveBeenCalledWith({});
+      expect(ordersServiceMock.findAll).toHaveBeenCalledWith(
+        {},
+        '550e8400-e29b-41d4-a716-446655440001',
+        'ADMIN',
+      );
+    });
+    it('does not query orders without a verified principal', async () => {
+      await expect(
+        controller.findAll({}, makeRequest({ verifiedPrincipal: undefined })),
+      ).rejects.toThrow(InternalServerErrorException);
+      expect(ordersServiceMock.findAll).not.toHaveBeenCalled();
     });
   });
 
@@ -93,16 +109,27 @@ describe('OrdersController', () => {
     it('returns order details by id', async () => {
       ordersServiceMock.findById.mockResolvedValue(SAMPLE_ORDER);
 
-      const result = await controller.findOne({ id: SAMPLE_ORDER.id });
+      const result = await controller.findOne(
+        { id: SAMPLE_ORDER.id },
+        makeRequest(),
+      );
 
       expect(result).toEqual(SAMPLE_ORDER);
-      expect(ordersServiceMock.findById).toHaveBeenCalledWith(SAMPLE_ORDER.id);
+      expect(ordersServiceMock.findById).toHaveBeenCalledWith(
+        SAMPLE_ORDER.id,
+        '550e8400-e29b-41d4-a716-446655440001',
+        'ADMIN',
+      );
     });
 
     it('throws NotFoundException when order not found', async () => {
-      ordersServiceMock.findById.mockRejectedValue(new NotFoundException('Order not found'));
+      ordersServiceMock.findById.mockRejectedValue(
+        new NotFoundException('Order not found'),
+      );
 
-      await expect(controller.findOne({ id: 'nonexistent' })).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.findOne({ id: 'nonexistent' }, makeRequest()),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -161,7 +188,11 @@ describe('OrdersController', () => {
   });
 
   it('returns applied result on successful confirmation', async () => {
-    const result = { kind: 'applied' as const, orderId: 'order-1', movements: 3 };
+    const result = {
+      kind: 'applied' as const,
+      orderId: 'order-1',
+      movements: 3,
+    };
     confirmSpy.mockResolvedValue(result);
 
     const response = await controller.confirm(
@@ -170,7 +201,11 @@ describe('OrdersController', () => {
       makeRequest(),
     );
 
-    expect(response).toEqual({ kind: 'applied', orderId: 'order-1', movements: 3 });
+    expect(response).toEqual({
+      kind: 'applied',
+      orderId: 'order-1',
+      movements: 3,
+    });
     expect(confirmSpy).toHaveBeenCalledWith('test.jwt.token', {
       orderId: 'order-1',
       type: 'INBOUND',
@@ -179,7 +214,11 @@ describe('OrdersController', () => {
   });
 
   it('returns replay result on idempotent retry', async () => {
-    const result = { kind: 'replay' as const, orderId: 'order-1', movements: 2 };
+    const result = {
+      kind: 'replay' as const,
+      orderId: 'order-1',
+      movements: 2,
+    };
     confirmSpy.mockResolvedValue(result);
 
     const response = await controller.confirm(
@@ -188,7 +227,11 @@ describe('OrdersController', () => {
       makeRequest(),
     );
 
-    expect(response).toEqual({ kind: 'replay', orderId: 'order-1', movements: 2 });
+    expect(response).toEqual({
+      kind: 'replay',
+      orderId: 'order-1',
+      movements: 2,
+    });
   });
 
   it('throws ConflictException on idempotency conflict', async () => {

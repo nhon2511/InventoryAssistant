@@ -21,8 +21,8 @@ class _RetryOrders extends PreviewRepository {
   final firstRead = Completer<Either<Failure, List<WarehouseOrder>>>();
   int reads = 0;
   @override
-  FutureEither<List<WarehouseOrder>> getInboundOrders() =>
-      reads++ == 0 ? firstRead.future : super.getInboundOrders();
+  FutureEither<List<WarehouseOrder>> list(OrderType type) =>
+      reads++ == 0 ? firstRead.future : super.list(type);
 }
 
 class _FailedSave extends PreviewRepository {

@@ -3,9 +3,11 @@ import 'package:smart_wms/core/enums/order_type.dart';
 import 'package:smart_wms/core/utils/typedefs.dart';
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
 
-/// Atomic draft/approval capability. Backend adapter intentionally pending.
+/// Draft, read and review capability; production uses the NestJS adapter.
 abstract class OrderWorkflowRepository {
   bool get available;
+  FutureEither<List<WarehouseOrder>> list(OrderType type);
+  FutureEither<WarehouseOrder> detail(String id);
   FutureEither<WarehouseOrder> saveDraft({
     required OrderType type,
     required String createdBy,

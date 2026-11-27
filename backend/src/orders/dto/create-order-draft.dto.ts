@@ -55,7 +55,10 @@ export class CreateOrderItemDraftDto {
     example: '2027-11-22',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'expiryDate must be a valid ISO-8601 date string' })
+  @IsDateString(
+    {},
+    { message: 'expiryDate must be a valid ISO-8601 date string' },
+  )
   expiryDate?: string;
 }
 
@@ -77,14 +80,12 @@ export class CreateOrderDraftDto {
   @MaxLength(1000)
   note?: string;
 
-  @ApiPropertyOptional({
-    description: 'Idempotency key hoặc mã request từ client',
-    example: 'req-draft-001',
+  @ApiProperty({
+    description: 'UUID ổn định cho retry tạo nháp; dùng làm order ID',
+    example: '770e8400-e29b-41d4-a716-446655440099',
   })
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  requestId?: string;
+  @IsUUID('all')
+  requestId!: string;
 
   @ApiProperty({
     description: 'Danh sách các dòng hàng trong phiếu nháp',

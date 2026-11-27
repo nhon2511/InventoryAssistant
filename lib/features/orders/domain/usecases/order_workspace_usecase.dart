@@ -5,22 +5,17 @@ import 'package:smart_wms/core/errors/failures.dart';
 import 'package:smart_wms/core/utils/typedefs.dart';
 import 'package:smart_wms/features/auth/domain/entities/profile.dart';
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
-import 'package:smart_wms/features/inbound/domain/repositories/inbound_repository.dart';
 import 'package:smart_wms/features/inventory/domain/entities/inventory_item.dart';
 import 'package:smart_wms/features/orders/domain/repositories/order_workflow_repository.dart';
-import 'package:smart_wms/features/outbound/domain/repositories/outbound_repository.dart';
 
 class ReadOrdersUseCase {
-  const ReadOrdersUseCase(this.inbound, this.outbound);
-  final InboundRepository inbound;
-  final OutboundRepository outbound;
+  const ReadOrdersUseCase(this.repository);
+  final OrderWorkflowRepository repository;
   FutureEither<List<WarehouseOrder>> list(
     OrderType type,
     Profile profile,
   ) async {
-    final result = type == OrderType.inbound
-        ? await inbound.getInboundOrders()
-        : await outbound.getOutboundOrders();
+    final result = await repository.list(type);
     return result.map(
       (orders) => orders
           .where(
@@ -35,11 +30,11 @@ class ReadOrdersUseCase {
     String id,
     Profile profile,
   ) async {
-    final result = type == OrderType.inbound
-        ? await inbound.getInboundOrderById(id)
-        : await outbound.getOutboundOrderById(id);
+    final result = await repository.detail(id);
     return result.flatMap(
-      (order) => profile.role.isManagerOrAbove || order.createdBy == profile.id
+      (order) =>
+          order.type == type &&
+              (profile.role.isManagerOrAbove || order.createdBy == profile.id)
           ? Right(order)
           : const Left(
               ServerFailure(message: 'Bạn không có quyền xem phiếu này.'),

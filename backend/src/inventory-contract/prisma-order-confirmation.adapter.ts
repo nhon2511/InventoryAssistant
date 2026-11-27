@@ -44,7 +44,7 @@ class PrismaOrderConfirmationPort extends PrismaInventoryTransactionPort impleme
 
   async completeOrder(id: string, type: ConfirmationType): Promise<void> {
     const result = await this.tx.warehouseOrder.updateMany({
-      where: { id, type, status: 'DRAFT' }, data: { status: 'COMPLETED' },
+      where: { id, type, status: 'CONFIRMED' }, data: { status: 'COMPLETED' },
     });
     if (result.count !== 1) throw new Error('Order state changed');
   }

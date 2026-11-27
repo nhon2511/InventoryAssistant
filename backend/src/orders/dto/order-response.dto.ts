@@ -47,6 +47,7 @@ export class OrderSummaryResponseDto {
   @ApiProperty() createdAt!: Date;
   @ApiProperty() updatedAt!: Date;
   @ApiProperty({ type: OrderCountDto }) _count!: OrderCountDto;
+  @ApiProperty({ type: [OrderItemDetailDto] }) items!: OrderItemDetailDto[];
 }
 
 export class OrderDetailResponseDto {

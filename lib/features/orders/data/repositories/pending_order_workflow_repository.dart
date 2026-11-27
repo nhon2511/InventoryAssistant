@@ -14,6 +14,11 @@ class PendingOrderWorkflowRepository implements OrderWorkflowRepository {
   @override
   bool get available => false;
   @override
+  FutureEither<List<WarehouseOrder>> list(OrderType type) async =>
+      const Left(failure);
+  @override
+  FutureEither<WarehouseOrder> detail(String id) async => const Left(failure);
+  @override
   FutureEither<WarehouseOrder> saveDraft({
     required OrderType type,
     required String createdBy,
