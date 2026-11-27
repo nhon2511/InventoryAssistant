@@ -3,15 +3,17 @@ import 'package:smart_wms/core/errors/exceptions.dart';
 import 'package:smart_wms/core/errors/failures.dart';
 import 'package:smart_wms/core/utils/typedefs.dart';
 import 'package:smart_wms/features/inventory/data/datasources/inventory_remote_datasource.dart';
+import 'package:smart_wms/features/inventory/data/datasources/nest_stock_datasource.dart';
 import 'package:smart_wms/features/inventory/domain/entities/inventory_item.dart';
 import 'package:smart_wms/features/inventory/domain/entities/location.dart';
 import 'package:smart_wms/features/inventory/domain/entities/product.dart';
 import 'package:smart_wms/features/inventory/domain/repositories/inventory_repository.dart';
 
 class InventoryRepositoryImpl implements InventoryRepository {
-  const InventoryRepositoryImpl(this._remoteDataSource);
+  const InventoryRepositoryImpl(this._remoteDataSource, {this.stockDataSource});
 
   final InventoryRemoteDataSource _remoteDataSource;
+  final NestStockDataSource? stockDataSource;
 
   @override
   FutureEither<List<Product>> getAllProducts() async {
@@ -76,7 +78,9 @@ class InventoryRepositoryImpl implements InventoryRepository {
   @override
   FutureEither<List<InventoryItem>> getAllInventoryItems() async {
     try {
-      final models = await _remoteDataSource.getAllInventoryItems();
+      final models =
+          await (stockDataSource?.getAllInventoryItems() ??
+              _remoteDataSource.getAllInventoryItems());
       return Right(models.map((m) => m.toEntity()).toList());
     } on ServerException catch (e) {
       return Left(ServerFailure(message: e.message));

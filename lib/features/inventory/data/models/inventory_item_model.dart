@@ -25,6 +25,29 @@ class InventoryItemModel {
     );
   }
 
+  factory InventoryItemModel.fromNestJson(Map<String, dynamic> json) {
+    if (json['id'] is! String ||
+        json['productId'] is! String ||
+        json['locationId'] is! String ||
+        json['quantityOnHand'] is! int ||
+        json['quantityReserved'] is! int ||
+        (json['lotNumber'] != null && json['lotNumber'] is! String) ||
+        (json['expiryDate'] != null && json['expiryDate'] is! String) ||
+        (json['updatedAt'] != null && json['updatedAt'] is! String)) {
+      throw const FormatException('Invalid stock item');
+    }
+    return InventoryItemModel(
+      id: json['id'] as String,
+      productId: json['productId'] as String,
+      locationId: json['locationId'] as String,
+      quantityOnHand: json['quantityOnHand'] as int,
+      quantityReserved: json['quantityReserved'] as int,
+      lotNumber: json['lotNumber'] as String?,
+      expiryDate: json['expiryDate'] as String?,
+      updatedAt: json['updatedAt'] as String?,
+    );
+  }
+
   final String id;
   final String productId;
   final String locationId;

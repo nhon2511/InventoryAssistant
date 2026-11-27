@@ -237,4 +237,3 @@ class _OcrScanScreenState extends State<OcrScanScreen> {
     ),
   );
 }
-

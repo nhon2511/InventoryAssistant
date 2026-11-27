@@ -135,3 +135,17 @@ Hệ thống tận dụng tối đa tính năng của **Supabase PostgreSQL**:
 * **Edge Functions**:
   * `parse-intent`: Tiếp nhận câu thoại tiếng Việt, trích xuất Intent (`query_stock`, `create_order`) và Entities dưới dạng JSON.
   * `query-stock`: Thực hiện truy vấn tồn kho thông minh và sinh câu trả lời tự nhiên.
+# CP2: đọc tồn kho qua NestJS
+
+Màn tổng quan tồn kho dùng `GET /api/v1/inventory/stock` với access token của phiên Supabase. Truyền URL của NestJS khi chạy hoặc build (không có URL mặc định):
+
+```powershell
+# Web trên cùng máy chạy NestJS
+flutter run -d chrome --dart-define=NESTJS_BASE_URL=http://localhost:3000
+# Android emulator; 10.0.2.2 trỏ về host của emulator
+flutter run -d emulator-5554 --dart-define=NESTJS_BASE_URL=http://10.0.2.2:3000
+# Android device; thay host bằng IP LAN/DNS mà điện thoại truy cập được
+flutter run -d <device-id> --dart-define=NESTJS_BASE_URL=https://wms-api.example.com
+```
+
+Build release chỉ chấp nhận HTTPS. Android debug cho phép HTTP tới backend local; release không bật cleartext. Web cần backend cho phép origin của ứng dụng qua CORS. Chưa có URL/project test được xác minh trong repo nên cần cấu hình endpoint và tài khoản Supabase phù hợp trước khi kiểm tra dữ liệu thật.

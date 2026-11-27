@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smart_wms/core/di/inventory_providers.dart';
 import 'package:smart_wms/core/enums/order_status.dart';
 import 'package:smart_wms/core/enums/order_type.dart';
 import 'package:smart_wms/core/widgets/async_panel.dart';
@@ -13,7 +14,6 @@ import 'package:smart_wms/features/auth/presentation/states/auth_state.dart';
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
 import 'package:smart_wms/features/inventory/domain/entities/inventory_item.dart';
 import 'package:smart_wms/features/inventory/domain/entities/product.dart';
-import 'package:smart_wms/features/inventory/presentation/controllers/inventory_realtime_controller.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/product_controller.dart';
 import 'package:smart_wms/features/orders/presentation/controllers/order_workspace_controller.dart';
 import 'package:smart_wms/features/reports/domain/entities/warehouse_report.dart';
@@ -40,8 +40,8 @@ class _StockOverviewScreenState extends ConsumerState<StockOverviewScreen> {
         value: ref.watch(productControllerProvider),
         onRetry: () => ref.invalidate(productControllerProvider),
         builder: (products) => AsyncPanel(
-          value: ref.watch(inventoryRealtimeProvider),
-          onRetry: () => ref.invalidate(inventoryRealtimeProvider),
+          value: ref.watch(stockOverviewItemsProvider),
+          onRetry: () => ref.invalidate(stockOverviewItemsProvider),
           builder: (items) {
             final report = WarehouseReport(
               products: products,
@@ -88,7 +88,7 @@ class _StockOverviewScreenState extends ConsumerState<StockOverviewScreen> {
                         tooltip: 'Tải lại tồn kho',
                         onPressed: () {
                           ref
-                            ..invalidate(inventoryRealtimeProvider)
+                            ..invalidate(stockOverviewItemsProvider)
                             ..invalidate(productControllerProvider);
                         },
                         icon: const Icon(Icons.refresh),
