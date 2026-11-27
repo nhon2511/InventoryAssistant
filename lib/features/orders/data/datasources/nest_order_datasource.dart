@@ -3,6 +3,7 @@ import 'package:smart_wms/core/enums/order_type.dart';
 import 'package:smart_wms/core/errors/exceptions.dart';
 import 'package:smart_wms/core/network/nest_api_client.dart';
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
+import 'package:smart_wms/features/orders/domain/repositories/order_workflow_repository.dart';
 
 class NestOrderDataSource {
   const NestOrderDataSource(this.api);
@@ -53,6 +54,41 @@ class NestOrderDataSource {
           'approve': approve,
         }),
       );
+
+  Future<OrderConfirmationOutcome> confirm({
+    required String orderId,
+    required OrderType type,
+    required Map<String, int> actualQuantities,
+    required String idempotencyKey,
+  }) async {
+    final data = await api.post(
+      '/api/v1/orders/${Uri.encodeComponent(orderId)}/confirm',
+      {
+        'type': type.dbValue,
+        'idempotencyKey': idempotencyKey,
+        'lines': actualQuantities.entries
+            .map(
+              (entry) => {'lineId': entry.key, 'actualQuantity': entry.value},
+            )
+            .toList(),
+      },
+    );
+    if (data is! Map<String, dynamic> ||
+        data['orderId'] != orderId ||
+        data['movements'] is! int ||
+        data['movements'] != actualQuantities.length) {
+      throw const ServerException(
+        message: 'Kết quả xác nhận từ máy chủ không hợp lệ.',
+      );
+    }
+    return switch (data['kind']) {
+      'applied' => OrderConfirmationOutcome.applied,
+      'replay' => OrderConfirmationOutcome.replay,
+      _ => throw const ServerException(
+        message: 'Kết quả xác nhận từ máy chủ không hợp lệ.',
+      ),
+    };
+  }
 
   WarehouseOrder _parse(Object? data) {
     if (data is! Map<String, dynamic> ||

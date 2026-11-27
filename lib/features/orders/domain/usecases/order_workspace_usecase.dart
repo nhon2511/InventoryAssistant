@@ -113,4 +113,42 @@ class OrderWorkspaceUseCase {
       reviewerId: profile.id,
     );
   }
+
+  FutureEither<OrderConfirmationOutcome> confirm(
+    WarehouseOrder order,
+    Profile profile, {
+    required Map<String, int> actualQuantities,
+    required String idempotencyKey,
+  }) async {
+    if (!profile.role.isManagerOrAbove ||
+        order.createdBy != profile.id ||
+        order.status != OrderStatus.confirmed) {
+      return const Left(
+        ServerFailure(message: 'Bạn không thể xác nhận phiếu này.'),
+      );
+    }
+    if (order.items.isEmpty ||
+        actualQuantities.length != order.items.length ||
+        idempotencyKey.trim().isEmpty ||
+        order.items.any((line) {
+          final quantity = actualQuantities[line.id];
+          return quantity == null ||
+              quantity <= 0 ||
+              quantity > line.expectedQuantity ||
+              line.locationId == null;
+        })) {
+      return const Left(
+        ServerFailure(
+          message:
+              'Nhập số lượng thực tế từ 1 đến số lượng dự kiến cho từng dòng.',
+        ),
+      );
+    }
+    return repository.confirm(
+      orderId: order.id,
+      type: order.type,
+      actualQuantities: actualQuantities,
+      idempotencyKey: idempotencyKey,
+    );
+  }
 }

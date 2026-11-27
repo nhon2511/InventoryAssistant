@@ -3,6 +3,8 @@ import 'package:smart_wms/core/enums/order_type.dart';
 import 'package:smart_wms/core/utils/typedefs.dart';
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
 
+enum OrderConfirmationOutcome { applied, replay }
+
 /// Draft, read and review capability; production uses the NestJS adapter.
 abstract class OrderWorkflowRepository {
   bool get available;
@@ -22,5 +24,12 @@ abstract class OrderWorkflowRepository {
     required OrderStatus expectedStatus,
     required bool approve,
     required String reviewerId,
+  });
+
+  FutureEither<OrderConfirmationOutcome> confirm({
+    required String orderId,
+    required OrderType type,
+    required Map<String, int> actualQuantities,
+    required String idempotencyKey,
   });
 }

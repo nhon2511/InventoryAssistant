@@ -13,6 +13,8 @@ import 'package:smart_wms/core/utils/typedefs.dart';
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
 import 'package:smart_wms/features/inbound/presentation/widgets/inbound_list_screen.dart';
 import 'package:smart_wms/features/inventory/presentation/widgets/stock_overview_screen.dart';
+import 'package:smart_wms/features/orders/domain/repositories/order_workflow_repository.dart';
+import 'package:smart_wms/features/orders/presentation/widgets/order_detail_screen.dart';
 import 'package:smart_wms/features/orders/presentation/widgets/order_form_screen.dart';
 
 import 'frontend_widgets_test.dart' show harness;
@@ -58,7 +60,71 @@ class _PendingSave extends PreviewRepository {
   }
 }
 
+class _FailedConfirm extends PreviewRepository {
+  int calls = 0;
+  @override
+  FutureEither<OrderConfirmationOutcome> confirm({
+    required String orderId,
+    required OrderType type,
+    required Map<String, int> actualQuantities,
+    required String idempotencyKey,
+  }) async {
+    calls++;
+    return const Left(ServerFailure(message: 'Không thể xác nhận phiếu.'));
+  }
+}
+
 void main() {
+  testWidgets('failed confirmation preserves entered actual quantity', (
+    tester,
+  ) async {
+    final repository = _FailedConfirm();
+    addTearDown(repository.dispose);
+    await repository.signIn(email: 'admin@preview.local', password: 'test');
+    repository.orders.add(
+      const WarehouseOrder(
+        id: 'confirm-1',
+        orderCode: 'PN-CONFIRM-1',
+        type: OrderType.inbound,
+        status: OrderStatus.confirmed,
+        createdBy: 'preview-admin',
+        items: [
+          WarehouseOrderItem(
+            id: 'confirm-line',
+            orderId: 'confirm-1',
+            productId: 'p-1',
+            locationId: 'l-1',
+            expectedQuantity: 5,
+            actualQuantity: 0,
+          ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(
+      harness(
+        repository,
+        const OrderDetailScreen(type: OrderType.inbound, orderId: 'confirm-1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '3');
+    await tester.scrollUntilVisible(
+      find.text('Xác nhận tồn kho'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Xác nhận tồn kho'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Xác nhận'));
+    await tester.pumpAndSettle();
+    expect(repository.calls, 1);
+    expect(find.text('Không thể xác nhận phiếu.'), findsOneWidget);
+    expect(find.text('Đã hoàn tất phiếu và cập nhật tồn kho.'), findsNothing);
+    expect(
+      tester.widget<TextField>(find.byType(TextField).last).controller!.text,
+      '3',
+    );
+  });
   testWidgets('saving shows loading and disables repeated submission', (
     tester,
   ) async {

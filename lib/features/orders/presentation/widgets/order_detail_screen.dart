@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:smart_wms/core/di/inventory_providers.dart';
 import 'package:smart_wms/core/enums/order_status.dart';
 import 'package:smart_wms/core/enums/order_type.dart';
 import 'package:smart_wms/core/widgets/async_panel.dart';
@@ -9,11 +10,13 @@ import 'package:smart_wms/core/widgets/confirm_dialog.dart';
 import 'package:smart_wms/core/widgets/workspace_layout.dart';
 import 'package:smart_wms/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:smart_wms/features/auth/presentation/states/auth_state.dart';
+import 'package:smart_wms/features/inventory/presentation/controllers/inventory_workspace_controller.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/location_controller.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/product_controller.dart';
 import 'package:smart_wms/features/orders/presentation/controllers/order_workspace_controller.dart';
 import 'package:smart_wms/features/orders/presentation/widgets/order_labels.dart';
 import 'package:smart_wms/features/outbound/domain/entities/pick_list_item.dart';
+import 'package:uuid/uuid.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
   const OrderDetailScreen({
@@ -30,14 +33,25 @@ class OrderDetailScreen extends ConsumerStatefulWidget {
 class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   bool busy = false;
   String? error;
+  String? confirmationKey;
+  final actualControllers = <String, TextEditingController>{};
+
+  @override
+  void dispose() {
+    for (final controller in actualControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final key = (widget.type, widget.orderId);
     final auth = ref.watch(authControllerProvider);
+    final profile = auth is AuthAuthenticated ? auth.profile : null;
     final products = ref.watch(productControllerProvider).value ?? [];
     final locations = ref.watch(locationControllerProvider).value ?? [];
-    final manager =
-        auth is AuthAuthenticated && auth.profile.role.isManagerOrAbove;
+    final manager = profile?.role.isManagerOrAbove ?? false;
     return Scaffold(
       body: AsyncPanel(
         value: ref.watch(orderDetailProvider(key)),
@@ -105,7 +119,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 ),
               const SizedBox(height: 16),
               const Text(
-                'Duyệt phiếu không xác nhận đã cập nhật tồn kho. Xử lý nhập/xuất an toàn cần contract backend riêng.',
+                'Duyệt phiếu chưa cập nhật tồn kho. Xác nhận sau khi nhập số lượng thực tế.',
               ),
               if (manager &&
                   !ref.watch(orderWorkflowRepositoryProvider).available)
@@ -143,11 +157,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                                 });
                                 final result = await ref
                                     .read(orderWorkspaceProvider)
-                                    .review(
-                                      order,
-                                      auth.profile,
-                                      approve: approve,
-                                    );
+                                    .review(order, profile!, approve: approve);
                                 if (!mounted) return;
                                 result.fold(
                                   (f) => setState(() {
@@ -173,6 +183,98 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                       ),
                   ],
                 ),
+              if (manager &&
+                  profile?.id == order.createdBy &&
+                  order.status == OrderStatus.confirmed &&
+                  order.items.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Số lượng thực tế',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Text(
+                  'Nhập từ 1 đến số lượng dự kiến cho từng dòng. Tồn kho chỉ đổi sau khi xác nhận thành công.',
+                ),
+                for (final line in order.items)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: TextField(
+                      controller: actualControllers.putIfAbsent(
+                        line.id,
+                        TextEditingController.new,
+                      ),
+                      enabled: !busy,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText:
+                            '${line.productName ?? line.productId} · dự kiến ${line.expectedQuantity}',
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: (_) => confirmationKey = null,
+                    ),
+                  ),
+                FilledButton.icon(
+                  onPressed: busy
+                      ? null
+                      : () async {
+                          final quantities = {
+                            for (final line in order.items)
+                              line.id:
+                                  int.tryParse(
+                                    actualControllers[line.id]!.text.trim(),
+                                  ) ??
+                                  0,
+                          };
+                          if (!await ConfirmDialog.show(
+                            context,
+                            title: 'Xác nhận nhập/xuất kho?',
+                            content: 'Cập nhật tồn kho theo số lượng thực tế đã nhập và hoàn tất phiếu.',
+                          )) {
+                            return;
+                          }
+                          if (!mounted) {
+                            return;
+                          }
+                          confirmationKey ??= const Uuid().v4();
+                          setState(() {
+                            busy = true;
+                            error = null;
+                          });
+                          final result = await ref
+                              .read(orderWorkspaceProvider)
+                              .confirm(
+                                order,
+                                profile!,
+                                actualQuantities: quantities,
+                                idempotencyKey: confirmationKey!,
+                              );
+                          if (!mounted) return;
+                          result.fold(
+                            (failure) => setState(() {
+                              busy = false;
+                              error = failure.message;
+                            }),
+                            (_) {
+                              setState(() => busy = false);
+                              ref
+                                ..invalidate(orderDetailProvider(key))
+                                ..invalidate(ordersProvider(widget.type))
+                                ..invalidate(stockSnapshotProvider)
+                                ..invalidate(stockOverviewItemsProvider);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Đã hoàn tất phiếu và cập nhật tồn kho.',
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: Text(busy ? 'Đang xác nhận...' : 'Xác nhận tồn kho'),
+                ),
+              ],
               if (widget.type == OrderType.outbound &&
                   order.items.isNotEmpty &&
                   !order.status.isTerminal)

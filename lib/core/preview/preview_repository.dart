@@ -501,6 +501,14 @@ class PreviewRepository
       Right(orders.where((o) => o.type == type).toList());
   @override
   FutureEither<WarehouseOrder> detail(String id) => _order(id);
+  @override
+  FutureEither<OrderConfirmationOutcome> confirm({
+    required String orderId,
+    required OrderType type,
+    required Map<String, int> actualQuantities,
+    required String idempotencyKey,
+  }) async =>
+      const Left(ServerFailure(message: 'Preview không xác nhận tồn kho.'));
   FutureEither<WarehouseOrder> _order(String id) async {
     final o = orders.where((o) => o.id == id).firstOrNull;
     return o == null ? const Left(missing) : Right(o);

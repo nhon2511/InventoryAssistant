@@ -10,6 +10,7 @@ import 'package:smart_wms/core/utils/typedefs.dart';
 import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
 import 'package:smart_wms/features/orders/data/datasources/nest_order_datasource.dart';
 import 'package:smart_wms/features/orders/data/repositories/nest_order_workflow_repository.dart';
+import 'package:smart_wms/features/orders/domain/repositories/order_workflow_repository.dart';
 
 Map<String, dynamic> envelope(Object? data) => {'success': true, 'data': data};
 const requestId = '770e8400-e29b-41d4-a716-446655440099';
@@ -185,4 +186,73 @@ void main() {
       expect(result.getLeft().toNullable()!.message, isNotEmpty);
     });
   }
+
+  test(
+    'confirm sends actual quantities and stable key, accepts applied/replay',
+    () async {
+      final bodies = <Map<String, dynamic>>[];
+      final repo = repository(
+        MockClient((request) async {
+          expect(request.headers['Authorization'], 'Bearer jwt-token');
+          expect(request.url.path, '/api/v1/orders/$requestId/confirm');
+          bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+          return http.Response(
+            jsonEncode(
+              envelope({
+                'kind': bodies.length == 1 ? 'applied' : 'replay',
+                'orderId': requestId,
+                'movements': 2,
+              }),
+            ),
+            200,
+          );
+        }),
+      );
+      FutureEither<OrderConfirmationOutcome> confirm() => repo.confirm(
+        orderId: requestId,
+        type: OrderType.inbound,
+        actualQuantities: {'line-1': 2, 'line-2': 4},
+        idempotencyKey: 'stable-key',
+      );
+      expect(
+        (await confirm()).getRight().toNullable(),
+        OrderConfirmationOutcome.applied,
+      );
+      expect(
+        (await confirm()).getRight().toNullable(),
+        OrderConfirmationOutcome.replay,
+      );
+      expect(bodies[0], bodies[1]);
+      expect(bodies[0]['lines'], [
+        {'lineId': 'line-1', 'actualQuantity': 2},
+        {'lineId': 'line-2', 'actualQuantity': 4},
+      ]);
+      expect(bodies[0]['idempotencyKey'], 'stable-key');
+    },
+  );
+
+  test('confirm rejects malformed success and HTTP conflicts', () async {
+    final malformed = repository(
+      MockClient(
+        (_) async => http.Response(
+          jsonEncode(
+            envelope({'kind': 'applied', 'orderId': requestId, 'movements': 0}),
+          ),
+          200,
+        ),
+      ),
+    );
+    final conflict = repository(
+      MockClient((_) async => http.Response('{}', 409)),
+    );
+    for (final repo in [malformed, conflict]) {
+      final result = await repo.confirm(
+        orderId: requestId,
+        type: OrderType.outbound,
+        actualQuantities: {'line-1': 1},
+        idempotencyKey: 'stable-key',
+      );
+      expect(result.isLeft(), isTrue);
+    }
+  });
 }

@@ -33,4 +33,11 @@ class PendingOrderWorkflowRepository implements OrderWorkflowRepository {
     required bool approve,
     required String reviewerId,
   }) async => const Left(failure);
+  @override
+  FutureEither<OrderConfirmationOutcome> confirm({
+    required String orderId,
+    required OrderType type,
+    required Map<String, int> actualQuantities,
+    required String idempotencyKey,
+  }) async => const Left(failure);
 }

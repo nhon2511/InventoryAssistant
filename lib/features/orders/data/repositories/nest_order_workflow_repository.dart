@@ -71,4 +71,27 @@ class NestOrderWorkflowRepository implements OrderWorkflowRepository {
       return Left(ServerFailure(message: e.message));
     }
   }
+
+  @override
+  FutureEither<OrderConfirmationOutcome> confirm({
+    required String orderId,
+    required OrderType type,
+    required Map<String, int> actualQuantities,
+    required String idempotencyKey,
+  }) async {
+    try {
+      return Right(
+        await source.confirm(
+          orderId: orderId,
+          type: type,
+          actualQuantities: actualQuantities,
+          idempotencyKey: idempotencyKey,
+        ),
+      );
+    } on ServerException catch (error) {
+      return Left(
+        ServerFailure(message: error.message, statusCode: error.statusCode),
+      );
+    }
+  }
 }

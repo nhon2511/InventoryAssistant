@@ -122,6 +122,13 @@ File: `lib/features/orders/domain/repositories/order_workflow_repository.dart`.
 - `review` chỉ chấp nhận DRAFT và dùng cập nhật có điều kiện; request sai trạng thái hoặc tranh chấp đồng thời trả 409. Bước confirm chỉ chấp nhận CONFIRMED. API confirm vẫn cần số lượng thực tế dương, trong khi draft tạo `actualQuantity=0`; việc thu thập/cập nhật số lượng thực tế và kiểm chứng stock ledger thuộc CP5, nên CP4 không tuyên bố luồng xác nhận đã chạy end to end.
 - List hiện chưa có phân trang/cursor/total; lọc tìm kiếm trong UI áp dụng trên tập đã tải. Kết quả test CP4 dùng mock/offline; chưa xác minh project Supabase thật hoặc Android device.
 
+## CP5 — xác nhận tồn kho theo số lượng thực tế (27/11/2026)
+
+- Flutter chỉ hiển thị form nhập tay trên phiếu `CONFIRMED` cho ADMIN/MANAGER là người tạo phiếu. Mỗi dòng phải nhập số nguyên từ 1 đến `expectedQuantity`; không tự lấy số dự kiến làm số thực tế. Giá trị và idempotency key giữ trong màn khi request thất bại; sửa giá trị tạo key mới. Scanner thuộc CP6.
+- `POST /api/v1/orders/:orderId/confirm` nhận `{type, idempotencyKey, lines:[{lineId, actualQuantity}]}`. Backend xác minh JWT, role ADMIN/MANAGER, actor là `createdBy`, trạng thái CONFIRMED, type, danh sách line ID khớp chính xác với order và số lượng hợp lệ. Client không gửi actor ID. Cùng key và payload replay; cùng key khác payload trả 409.
+- Một transaction serializable cập nhật `warehouse_order_items.actual_quantity`, khóa inventory theo product/location/lot, cộng tồn nhập hoặc trừ tồn xuất sau khi kiểm tra tồn khả dụng (`quantity_on_hand - quantity_reserved`), ghi `stock_ledger`, chuyển order sang COMPLETED và hoàn tất `idempotency_keys`. Bất kỳ lỗi nào rollback toàn bộ; DRAFT/CANCELLED/COMPLETED bị từ chối. Không dùng Supabase RPC/direct write hoặc `/inventory/receive|ship` cho cùng order.
+- Backend yêu cầu inventory row hiện hữu duy nhất và cùng expiry; không tự tạo row mới. Tracked Prisma schema có model ledger/idempotency nhưng không có migration backend được theo dõi. SQL candidate untracked trong `supabase/` chưa được apply hoặc sửa và không khớp model (`inventory_item_id`, `scope_id`, khóa `(scope_id,key)`). Không có project dev/test DB an toàn được xác định nên CP5 chỉ chứng minh logic bằng mock/offline, chưa chứng minh transaction với PostgreSQL/Supabase thật hoặc chạy Android device.
+
 ## Báo cáo và thiết bị
 
 - Excel gồm tồn hiện tại, lịch sử header phiếu theo ngày tạo và sheet phạm vi. Không có số liệu trang trí.
