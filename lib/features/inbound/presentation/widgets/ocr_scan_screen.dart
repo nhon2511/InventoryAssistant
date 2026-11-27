@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_wms/core/services/image_ocr_service.dart';
 import 'package:smart_wms/core/utils/ocr_text_extractor.dart';
@@ -15,6 +16,7 @@ class OcrScanScreen extends StatefulWidget {
 }
 
 class _OcrScanScreenState extends State<OcrScanScreen> {
+  bool get imageOcrAvailable => kIsWeb || widget.ocrService != null;
   final input = TextEditingController();
   final lotNumber = TextEditingController();
   final expiryDate = TextEditingController();
@@ -134,15 +136,18 @@ class _OcrScanScreenState extends State<OcrScanScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Chọn ảnh hoặc chụp nhãn bằng camera. Kết quả được xử lý trong trình duyệt; hãy kiểm tra lại trước khi dùng.',
+            Text(
+              imageOcrAvailable
+                  ? 'Chọn ảnh hoặc chụp nhãn bằng camera. Kết quả được xử lý trong trình duyệt; hãy kiểm tra lại trước khi dùng.'
+                  : 'OCR ảnh hiện chỉ hỗ trợ Web. Nhập văn bản hoặc LOT/HSD thủ công để xem trước.',
             ),
             const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: isRecognizing ? null : _chooseImage,
-              icon: const Icon(Icons.add_a_photo_outlined),
-              label: const Text('Chọn ảnh hoặc chụp ảnh'),
-            ),
+            if (imageOcrAvailable)
+              FilledButton.icon(
+                onPressed: isRecognizing ? null : _chooseImage,
+                icon: const Icon(Icons.add_a_photo_outlined),
+                label: const Text('Chọn ảnh hoặc chụp ảnh'),
+              ),
             if (isRecognizing) ...[
               const SizedBox(height: 12),
               LinearProgressIndicator(value: progress > 0 ? progress : null),
@@ -189,7 +194,7 @@ class _OcrScanScreenState extends State<OcrScanScreen> {
               icon: const Icon(Icons.manage_search),
               label: const Text('Phân tích văn bản đã nhập'),
             ),
-            if (hasResult) ...[
+            if (hasResult || !imageOcrAvailable) ...[
               const SizedBox(height: 20),
               Text(
                 'Kiểm tra và chỉnh kết quả',
@@ -223,14 +228,15 @@ class _OcrScanScreenState extends State<OcrScanScreen> {
                         ? null
                         : _applyResult,
                     icon: const Icon(Icons.playlist_add_check),
-                    label: const Text('Dùng kết quả trong dòng nhập'),
+                    label: const Text('Dùng kết quả xem trước'),
                   ),
                 ),
             ],
             const SizedBox(height: 20),
-            const Text(
-              'Lần đầu dùng OCR cần tải bộ nhận diện và dữ liệu tiếng Việt/Anh từ internet. Ảnh không được gửi lên backend.',
-            ),
+            if (kIsWeb)
+              const Text(
+                'Lần đầu dùng OCR cần tải bộ nhận diện và dữ liệu tiếng Việt/Anh từ internet. Ảnh không được gửi lên backend.',
+              ),
           ],
         ),
       ),

@@ -225,16 +225,13 @@ void main() {
     expect(router.routerDelegate.currentConfiguration.uri.path, '/');
   });
 
-  testWidgets('pick verification returns to originating order', (tester) async {
+  testWidgets('order detail does not offer detached pick session', (
+    tester,
+  ) async {
     final router = await openApp(tester, 1440);
     router.go('/outbound/out-1');
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.widgetWithIcon(OutlinedButton, Icons.qr_code_scanner),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byType(ScannerBackButton));
-    await tester.pumpAndSettle();
+    expect(find.text('Đối soát mã hàng'), findsNothing);
     expect(
       router.routerDelegate.currentConfiguration.uri.path,
       '/outbound/out-1',

@@ -75,6 +75,77 @@ class _FailedConfirm extends PreviewRepository {
 }
 
 void main() {
+  testWidgets('confirmed order scan caps quantity and undo/reset keep form', (
+    tester,
+  ) async {
+    final repository = PreviewRepository();
+    addTearDown(repository.dispose);
+    await repository.signIn(email: 'admin@preview.local', password: 'test');
+    repository.orders.add(
+      const WarehouseOrder(
+        id: 'scan-1',
+        orderCode: 'PN-SCAN-1',
+        type: OrderType.inbound,
+        status: OrderStatus.confirmed,
+        createdBy: 'preview-admin',
+        items: [
+          WarehouseOrderItem(
+            id: 'scan-line',
+            orderId: 'scan-1',
+            productId: 'p-1',
+            locationId: 'l-1',
+            expectedQuantity: 2,
+            actualQuantity: 0,
+          ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(
+      harness(
+        repository,
+        const OrderDetailScreen(type: OrderType.inbound, orderId: 'scan-1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final quantity = find.widgetWithText(TextField, 'p-1 · dự kiến 2');
+    final barcode = find.widgetWithText(TextField, 'Mã vạch');
+    final add = find.byTooltip('Đối soát mã');
+    await tester.scrollUntilVisible(
+      add,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(barcode, 'UNKNOWN');
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Mã vạch không có trong danh mục sản phẩm.'),
+      findsOneWidget,
+    );
+    expect(tester.widget<TextField>(quantity).controller!.text, isEmpty);
+    for (var i = 0; i < 3; i++) {
+      await tester.enterText(barcode, '893000000001');
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+    }
+    expect(tester.widget<TextField>(quantity).controller!.text, '2');
+    expect(find.text('Số lượng quét đã đạt mức dự kiến.'), findsOneWidget);
+    await tester.tap(find.text('Hoàn tác quét'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(quantity).controller!.text, '1');
+    await tester.tap(find.text('Xóa phiên quét'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hủy'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(quantity).controller!.text, '1');
+    await tester.tap(find.text('Xóa phiên quét'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Xác nhận'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(quantity).controller!.text, '');
+    expect(repository.orders.last.status, OrderStatus.confirmed);
+  });
+
   testWidgets('failed confirmation preserves entered actual quantity', (
     tester,
   ) async {
@@ -107,7 +178,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).last, '3');
+    final actualQuantity = find.widgetWithText(TextField, 'p-1 · dự kiến 5');
+    await tester.enterText(actualQuantity, '3');
     await tester.scrollUntilVisible(
       find.text('Xác nhận tồn kho'),
       250,
@@ -120,10 +192,7 @@ void main() {
     expect(repository.calls, 1);
     expect(find.text('Không thể xác nhận phiếu.'), findsOneWidget);
     expect(find.text('Đã hoàn tất phiếu và cập nhật tồn kho.'), findsNothing);
-    expect(
-      tester.widget<TextField>(find.byType(TextField).last).controller!.text,
-      '3',
-    );
+    expect(tester.widget<TextField>(actualQuantity).controller!.text, '3');
   });
   testWidgets('saving shows loading and disables repeated submission', (
     tester,

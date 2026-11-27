@@ -10,12 +10,15 @@ import 'package:smart_wms/core/widgets/confirm_dialog.dart';
 import 'package:smart_wms/core/widgets/workspace_layout.dart';
 import 'package:smart_wms/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:smart_wms/features/auth/presentation/states/auth_state.dart';
+import 'package:smart_wms/features/inbound/domain/entities/warehouse_order.dart';
+import 'package:smart_wms/features/inbound/presentation/widgets/camera_scan_dialog.dart';
+import 'package:smart_wms/features/inventory/domain/entities/product.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/inventory_workspace_controller.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/location_controller.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/product_controller.dart';
+import 'package:smart_wms/features/orders/domain/usecases/apply_order_scan.dart';
 import 'package:smart_wms/features/orders/presentation/controllers/order_workspace_controller.dart';
 import 'package:smart_wms/features/orders/presentation/widgets/order_labels.dart';
-import 'package:smart_wms/features/outbound/domain/entities/pick_list_item.dart';
 import 'package:uuid/uuid.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
@@ -35,13 +38,85 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   String? error;
   String? confirmationKey;
   final actualControllers = <String, TextEditingController>{};
+  final barcodeController = TextEditingController();
+  final previewControllers = <String, TextEditingController>{};
+  String? scanMessage;
+  String? previousCameraBarcode;
+  DateTime? previousCameraAt;
+  final scanHistory = <(String, String)>[];
 
   @override
   void dispose() {
     for (final controller in actualControllers.values) {
       controller.dispose();
     }
+    for (final controller in previewControllers.values) {
+      controller.dispose();
+    }
+    barcodeController.dispose();
     super.dispose();
+  }
+
+  void applyScan(
+    WarehouseOrder order,
+    List<Product> products,
+    String barcode, {
+    bool fromCamera = false,
+  }) {
+    final now = DateTime.now();
+    final quantities = {
+      for (final line in order.items)
+        line.id:
+            int.tryParse(actualControllers[line.id]?.text.trim() ?? '') ?? 0,
+    };
+    final result = const ApplyOrderScan()(
+      order: order,
+      products: products,
+      actualQuantities: quantities,
+      barcode: barcode,
+      now: now,
+      previousCameraBarcode: previousCameraBarcode,
+      previousCameraAt: previousCameraAt,
+      fromCamera: fromCamera,
+    );
+    setState(() {
+      scanMessage = result.message;
+      if (result.accepted) {
+        scanHistory.add((
+          result.lineId!,
+          actualControllers[result.lineId]!.text,
+        ));
+        actualControllers[result.lineId]!.text = result.quantity.toString();
+        confirmationKey = null;
+        barcodeController.clear();
+        if (fromCamera) {
+          previousCameraBarcode = barcode.trim();
+          previousCameraAt = now;
+        }
+        scanMessage = 'Đã cộng 1 vào đúng dòng phiếu.';
+      }
+    });
+  }
+
+  Future<void> resetScans() async {
+    if (scanHistory.isEmpty) return;
+    if (!await ConfirmDialog.show(
+      context,
+      title: 'Xóa phiên quét?',
+      content: 'Hoàn tác các lần quét của phiên này; số lượng nhập tay trước đó được giữ lại.',
+      isDestructive: true,
+    )) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      for (final entry in scanHistory.reversed) {
+        actualControllers[entry.$1]?.text = entry.$2;
+      }
+      scanHistory.clear();
+      confirmationKey = null;
+      scanMessage = 'Đã xóa phiên quét.';
+    });
   }
 
   @override
@@ -210,9 +285,163 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                             '${line.productName ?? line.productId} · dự kiến ${line.expectedQuantity}',
                         border: const OutlineInputBorder(),
                       ),
-                      onChanged: (_) => confirmationKey = null,
+                      onChanged: (_) {
+                        confirmationKey = null;
+                        scanHistory.clear();
+                      },
                     ),
                   ),
+                const SizedBox(height: 12),
+                Text(
+                  'Quét mã vào phiếu',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Text(
+                  'Quét hoặc nhập mã chỉ cộng số lượng trong form. Xác nhận tồn kho vẫn là bước riêng.',
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: barcodeController,
+                        enabled: !busy,
+                        decoration: const InputDecoration(
+                          labelText: 'Mã vạch',
+                          border: OutlineInputBorder(),
+                        ),
+                        onSubmitted: (value) =>
+                            applyScan(order, products, value),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Đối soát mã',
+                      onPressed: busy
+                          ? null
+                          : () => applyScan(
+                              order,
+                              products,
+                              barcodeController.text,
+                            ),
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                    IconButton(
+                      tooltip: 'Mở camera',
+                      onPressed: busy || !CameraScanDialog.supported
+                          ? null
+                          : () async {
+                              final code = await showDialog<String>(
+                                context: context,
+                                builder: (_) => const CameraScanDialog(),
+                              );
+                              if (mounted && code != null) {
+                                applyScan(
+                                  order,
+                                  products,
+                                  code,
+                                  fromCamera: true,
+                                );
+                              }
+                            },
+                      icon: const Icon(Icons.qr_code_scanner),
+                    ),
+                  ],
+                ),
+                if (scanMessage != null) Text(scanMessage!),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    TextButton.icon(
+                      onPressed: busy || scanHistory.isEmpty
+                          ? null
+                          : () {
+                              final previous = scanHistory.removeLast();
+                              setState(() {
+                                actualControllers[previous.$1]!.text =
+                                    previous.$2;
+                                confirmationKey = null;
+                                scanMessage = 'Đã hoàn tác lần quét cuối.';
+                              });
+                            },
+                      icon: const Icon(Icons.undo),
+                      label: const Text('Hoàn tác quét'),
+                    ),
+                    TextButton.icon(
+                      onPressed: busy || scanHistory.isEmpty
+                          ? null
+                          : resetScans,
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Xóa phiên quét'),
+                    ),
+                  ],
+                ),
+                if (widget.type == OrderType.inbound) ...[
+                  const Text(
+                    'LOT/HSD: chỉ xem trước trên phiếu đã duyệt; API confirm hiện chưa lưu thay đổi này.',
+                  ),
+                  for (final line in order.items) ...[
+                    Text(line.productName ?? line.productId),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: previewControllers.putIfAbsent(
+                              '${line.id}:lot',
+                              () => TextEditingController(
+                                text: line.lotNumber ?? '',
+                              ),
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'LOT xem trước / nhập tay',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: previewControllers.putIfAbsent(
+                              '${line.id}:expiry',
+                              () => TextEditingController(
+                                text: line.expiryDate == null
+                                    ? ''
+                                    : DateFormat('dd/MM/yyyy')
+                                          .format(line.expiryDate!),
+                              ),
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'HSD xem trước / nhập tay',
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Đọc nhãn bằng OCR',
+                          onPressed: busy
+                              ? null
+                              : () async {
+                                  final values = await context
+                                      .push<Map<String, String>>(
+                                        '/ocr-scan',
+                                        extra: 'inbound-line',
+                                      );
+                                  if (!mounted || values == null) return;
+                                  setState(() {
+                                    if (values['lotNumber'] != null) {
+                                      previewControllers['${line.id}:lot']!
+                                              .text =
+                                          values['lotNumber']!;
+                                    }
+                                    if (values['expiryDate'] != null) {
+                                      previewControllers['${line.id}:expiry']!
+                                              .text =
+                                          values['expiryDate']!;
+                                    }
+                                  });
+                                },
+                          icon: const Icon(Icons.document_scanner_outlined),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
                 FilledButton.icon(
                   onPressed: busy
                       ? null
@@ -275,37 +504,6 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   label: Text(busy ? 'Đang xác nhận...' : 'Xác nhận tồn kho'),
                 ),
               ],
-              if (widget.type == OrderType.outbound &&
-                  order.items.isNotEmpty &&
-                  !order.status.isTerminal)
-                OutlinedButton.icon(
-                  onPressed: () {
-                    final pickItems = order.items.map((line) {
-                      final product = products
-                          .where((candidate) => candidate.id == line.productId)
-                          .firstOrNull;
-                      final location = locations
-                          .where((candidate) => candidate.id == line.locationId)
-                          .firstOrNull;
-                      return PickListItem(
-                        productId: line.productId,
-                        productName:
-                            line.productName ?? product?.name ?? line.productId,
-                        barcode: product?.barcode ?? '',
-                        locationLabel:
-                            location?.displayLabel ??
-                            line.locationId ??
-                            'Chưa chọn',
-                        expectedQuantity: line.expectedQuantity,
-                        pickedQuantity: line.actualQuantity,
-                        lotNumber: line.lotNumber,
-                      );
-                    }).toList();
-                    context.push('/pick-verify/${order.id}', extra: pickItems);
-                  },
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Đối soát mã hàng'),
-                ),
               if (error != null)
                 Text(
                   error!,

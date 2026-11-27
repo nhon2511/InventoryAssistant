@@ -58,7 +58,7 @@ void main() {
     expect(fields[2].controller!.text, '25/12/2027');
 
     await tester.enterText(find.byType(TextField).at(1), 'MANUAL-LOT');
-    await tester.tap(find.text('Dùng kết quả trong dòng nhập'));
+    await tester.tap(find.text('Dùng kết quả xem trước'));
     expect(applied, {'lotNumber': 'MANUAL-LOT', 'expiryDate': '25/12/2027'});
     expect(tester.takeException(), isNull);
   });
