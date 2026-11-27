@@ -1,5 +1,7 @@
 import 'package:excel/excel.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:smart_wms/core/enums/order_status.dart';
 import 'package:smart_wms/core/enums/order_type.dart';
 import 'package:smart_wms/core/preview/preview_repository.dart';
@@ -8,6 +10,7 @@ import 'package:smart_wms/features/reports/domain/entities/warehouse_report.dart
 import 'package:smart_wms/features/reports/presentation/services/report_exporter.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   test('report separates units, includes missing stock in alerts, and exports received rows', () {
     final repository = PreviewRepository();
     addTearDown(repository.dispose);
@@ -64,5 +67,26 @@ void main() {
       ['end'],
     );
     expect(report.between(null, null).length, 3);
+  });
+  test('empty report exports valid Excel and Unicode PDF', () async {
+    final report = WarehouseReport(
+      products: const [],
+      locations: const [],
+      stock: const [],
+      orders: const [],
+      loadedAt: DateTime(2026, 11, 27),
+    );
+    const exporter = ReportExporter();
+    expect(
+      Excel.decodeBytes(exporter.excel(report, null, null))
+          .sheets['Ton hien tai']!
+          .maxRows,
+      1,
+    );
+    final font = pw.Font.ttf(
+      await rootBundle.load('assets/fonts/Roboto-Regular.ttf'),
+    );
+    final pdf = await exporter.pdf(report, null, null, font: font);
+    expect(pdf.length, greaterThan(100));
   });
 }
