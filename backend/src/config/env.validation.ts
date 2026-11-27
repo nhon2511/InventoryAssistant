@@ -88,6 +88,10 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString({ message: 'CORS_ORIGINS must be a string' })
   CORS_ORIGINS: string = '*';
+
+  @IsOptional()
+  @IsString({ message: 'GEMINI_API_KEY must be a string' })
+  GEMINI_API_KEY?: string;
 }
 
 export function formatValidationErrors(errors: ValidationError[]): string {
