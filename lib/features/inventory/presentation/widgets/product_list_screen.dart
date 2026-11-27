@@ -20,7 +20,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
-    final admin = auth is AuthAuthenticated && auth.profile.role.isAdmin;
+    final editor =
+        auth is AuthAuthenticated && auth.profile.role.isManagerOrAbove;
     return Scaffold(
       body: AsyncPanel(
         value: ref.watch(productControllerProvider),
@@ -48,7 +49,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                         title: 'Sản phẩm',
                         description: 'Tra cứu SKU, mã vạch và đơn vị hàng hóa.',
                         actions: [
-                          if (admin)
+                          if (editor)
                             FilledButton.icon(
                               onPressed: () => showDialog<void>(
                                 context: context,

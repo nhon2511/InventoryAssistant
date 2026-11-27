@@ -22,6 +22,8 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
     final admin = auth is AuthAuthenticated && auth.profile.role.isAdmin;
+    final editor =
+        auth is AuthAuthenticated && auth.profile.role.isManagerOrAbove;
     return Scaffold(
       body: WorkspaceContent(
         child: Column(
@@ -35,7 +37,7 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
                     title: 'Vị trí lưu trữ',
                     description: 'Tra cứu khu, dãy, kệ và ô chứa hàng.',
                     actions: [
-                      if (admin)
+                      if (editor)
                         FilledButton.icon(
                           onPressed: () => showDialog<void>(
                             context: context,
@@ -153,7 +155,7 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
                                         ],
                                       ),
                                     ),
-                                    trailing: admin
+                                    trailing: editor
                                         ? PopupMenuButton<String>(
                                             enabled: !busy,
                                             tooltip: 'Thao tác vị trí',
@@ -215,15 +217,16 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
                                                 },
                                               );
                                             },
-                                            itemBuilder: (_) => const [
-                                              PopupMenuItem(
+                                            itemBuilder: (_) => [
+                                              const PopupMenuItem(
                                                 value: 'edit',
                                                 child: Text('Sửa'),
                                               ),
-                                              PopupMenuItem(
-                                                value: 'delete',
-                                                child: Text('Xóa'),
-                                              ),
+                                              if (admin)
+                                                const PopupMenuItem(
+                                                  value: 'delete',
+                                                  child: Text('Xóa'),
+                                                ),
                                             ],
                                           )
                                         : null,

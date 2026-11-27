@@ -24,6 +24,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
     final admin = auth is AuthAuthenticated && auth.profile.role.isAdmin;
+    final editor =
+        auth is AuthAuthenticated && auth.profile.role.isManagerOrAbove;
     return Scaffold(
       body: AsyncPanel(
         value: ref.watch(productDetailProvider(widget.productId)),
@@ -43,7 +45,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   ),
                 ],
               ),
-              if (admin &&
+              if (editor &&
                   !ref.watch(inventoryMaintenanceRepositoryProvider).available)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
@@ -60,7 +62,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   padding: const EdgeInsets.only(top: 12),
                   child: Text(p.description!),
                 ),
-              if (admin)
+              if (editor)
                 Wrap(
                   spacing: 8,
                   children: [
@@ -72,40 +74,41 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       icon: const Icon(Icons.edit_outlined),
                       label: const Text('Sửa'),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: busy
-                          ? null
-                          : () async {
-                              if (!await ConfirmDialog.show(
-                                context,
-                                title: 'Xóa sản phẩm?',
-                                content:
-                                    'Xóa ${p.name}? Backend phải kiểm tra tồn kho và tham chiếu trước khi xóa.',
-                                isDestructive: true,
-                              )) {
-                                return;
-                              }
-                              if (!mounted) return;
-                              setState(() => busy = true);
-                              final result = await ref
-                                  .read(maintainInventoryProvider)
-                                  .deleteProduct(p.id, auth.profile.role);
-                              if (!mounted) return;
-                              setState(() => busy = false);
-                              result.fold(
-                                (f) => ScaffoldMessenger.of(context)
-                                    .showSnackBar(
-                                      SnackBar(content: Text(f.message)),
-                                    ),
-                                (_) {
-                                  ref.invalidate(productControllerProvider);
-                                  context.go('/products');
-                                },
-                              );
-                            },
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Xóa'),
-                    ),
+                    if (admin)
+                      OutlinedButton.icon(
+                        onPressed: busy
+                            ? null
+                            : () async {
+                                if (!await ConfirmDialog.show(
+                                  context,
+                                  title: 'Xóa sản phẩm?',
+                                  content:
+                                      'Xóa ${p.name}? Backend phải kiểm tra tồn kho và tham chiếu trước khi xóa.',
+                                  isDestructive: true,
+                                )) {
+                                  return;
+                                }
+                                if (!mounted) return;
+                                setState(() => busy = true);
+                                final result = await ref
+                                    .read(maintainInventoryProvider)
+                                    .deleteProduct(p.id, auth.profile.role);
+                                if (!mounted) return;
+                                setState(() => busy = false);
+                                result.fold(
+                                  (f) => ScaffoldMessenger.of(context)
+                                      .showSnackBar(
+                                        SnackBar(content: Text(f.message)),
+                                      ),
+                                  (_) {
+                                    ref.invalidate(productControllerProvider);
+                                    context.go('/products');
+                                  },
+                                );
+                              },
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Xóa'),
+                      ),
                   ],
                 ),
               const Divider(height: 32),

@@ -2,6 +2,12 @@
 
 Cập nhật: 13/10/2026. Đây là yêu cầu adapter/contract, không phải API đã triển khai hoặc schema đề xuất đã được duyệt.
 
+## CP3 — Adapter danh mục Flutter → NestJS (27/11/2026)
+
+Production providers hiện dùng `NestApiClient` với Supabase access token cho `GET/POST/PUT/DELETE /api/v1/products` và `/api/v1/locations`. List, detail và tìm barcode đọc cùng nguồn NestJS với thao tác ghi; tìm tên/SKU và lọc vị trí trên danh sách đã tải. Mã mới dùng POST không gửi ID, sửa dùng PUT với ID server trả về. ADMIN/MANAGER được tạo/sửa; chỉ ADMIN được xóa; STAFF chỉ xem. Backend guard vẫn là nơi quyết định quyền cuối cùng. Stock theo sản phẩm trên màn chi tiết dùng `GET /api/v1/inventory/stock?productId=...`; báo cáo và các nguồn đọc ngoài danh mục không nằm trong cutover này.
+
+Client chấp nhận envelope thành công từ interceptor (200/201) và 204 khi xóa; lỗi từ exception filter được ánh xạ theo status, gồm 409 duplicate SKU/barcode hoặc còn tham chiếu. UI giữ form khi lưu lỗi. Preview tiếp tục dùng repository fixture riêng. Build/test với mock không xác minh endpoint, role claim, schema hoặc dữ liệu thật trên Supabase; URL NestJS vẫn cần cấu hình theo môi trường như README.
+
 ## CP1 — Kiểm kê contract Android + Web (27/11/2026)
 
 Đây là đối chiếu tĩnh mã nguồn Flutter/NestJS và năm migration local. Không chạy app/test, không kết nối Supabase và không xác minh API/database thật. “Có trong mã” không đồng nghĩa đã tích hợp hoặc được phép cutover. Flutter production entry là `lib/main.dart`; preview dùng dependency fixture riêng.

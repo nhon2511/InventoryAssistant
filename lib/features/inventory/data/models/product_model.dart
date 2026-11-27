@@ -27,6 +27,31 @@ class ProductModel {
     );
   }
 
+  factory ProductModel.fromNestJson(Map<String, dynamic> json) {
+    if (json['id'] is! String ||
+        json['sku'] is! String ||
+        json['barcode'] is! String ||
+        json['name'] is! String ||
+        json['unit'] is! String ||
+        json['minSafetyStock'] is! int ||
+        (json['description'] != null && json['description'] is! String) ||
+        (json['createdAt'] != null && json['createdAt'] is! String) ||
+        (json['updatedAt'] != null && json['updatedAt'] is! String)) {
+      throw const FormatException('Invalid product');
+    }
+    return ProductModel(
+      id: json['id'] as String,
+      sku: json['sku'] as String,
+      barcode: json['barcode'] as String,
+      name: json['name'] as String,
+      unit: json['unit'] as String,
+      minSafetyStock: json['minSafetyStock'] as int,
+      description: json['description'] as String?,
+      createdAt: json['createdAt'] as String?,
+      updatedAt: json['updatedAt'] as String?,
+    );
+  }
+
   final String id;
   final String sku;
   final String barcode;

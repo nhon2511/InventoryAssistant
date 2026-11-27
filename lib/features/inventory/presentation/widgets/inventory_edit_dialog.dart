@@ -7,7 +7,6 @@ import 'package:smart_wms/features/inventory/domain/entities/product.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/inventory_workspace_controller.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/location_controller.dart';
 import 'package:smart_wms/features/inventory/presentation/controllers/product_controller.dart';
-import 'package:uuid/uuid.dart';
 
 class InventoryEditDialog extends ConsumerStatefulWidget {
   const InventoryEditDialog({
@@ -171,8 +170,8 @@ class _InventoryEditDialogState extends ConsumerState<InventoryEditDialog> {
     if (busy) return;
     if (!form.currentState!.validate()) return;
     final auth = ref.read(authControllerProvider);
-    if (auth is! AuthAuthenticated || !auth.profile.role.isAdmin) {
-      setState(() => error = 'Chỉ Admin được quản lý dữ liệu.');
+    if (auth is! AuthAuthenticated || !auth.profile.role.isManagerOrAbove) {
+      setState(() => error = 'Chỉ Admin hoặc Manager được quản lý dữ liệu.');
       return;
     }
     if (!ref.read(inventoryMaintenanceRepositoryProvider).available) {
@@ -188,7 +187,7 @@ class _InventoryEditDialogState extends ConsumerState<InventoryEditDialog> {
     final result = widget.isLocation
         ? await usecase.saveLocation(
             Location(
-              id: widget.location?.id ?? const Uuid().v4(),
+              id: widget.location?.id ?? '',
               zoneCode: values[0],
               aisleCode: values[1],
               rackCode: values[2],
@@ -200,7 +199,7 @@ class _InventoryEditDialogState extends ConsumerState<InventoryEditDialog> {
           )
         : await usecase.saveProduct(
             Product(
-              id: widget.product?.id ?? const Uuid().v4(),
+              id: widget.product?.id ?? '',
               name: values[0],
               sku: values[1],
               barcode: values[2],

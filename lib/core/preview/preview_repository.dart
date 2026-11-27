@@ -350,9 +350,20 @@ class PreviewRepository
     )) {
       return const Left(ServerFailure(message: 'SKU hoặc mã vạch đã tồn tại.'));
     }
-    products.removeWhere((p) => p.id == product.id);
-    products.add(product);
-    return Right(product);
+    final saved = product.id.isEmpty
+        ? Product(
+            id: const Uuid().v4(),
+            sku: product.sku,
+            barcode: product.barcode,
+            name: product.name,
+            unit: product.unit,
+            minSafetyStock: product.minSafetyStock,
+            description: product.description,
+          )
+        : product;
+    products.removeWhere((p) => p.id == saved.id);
+    products.add(saved);
+    return Right(saved);
   }
 
   @override
@@ -381,9 +392,20 @@ class PreviewRepository
         ServerFailure(message: 'Mã vị trí hoặc mã vạch đã tồn tại.'),
       );
     }
-    locations.removeWhere((l) => l.id == location.id);
-    locations.add(location);
-    return Right(location);
+    final saved = location.id.isEmpty
+        ? Location(
+            id: const Uuid().v4(),
+            zoneCode: location.zoneCode,
+            aisleCode: location.aisleCode,
+            rackCode: location.rackCode,
+            binCode: location.binCode,
+            locationBarcode: location.locationBarcode,
+            maxCapacityKg: location.maxCapacityKg,
+          )
+        : location;
+    locations.removeWhere((l) => l.id == saved.id);
+    locations.add(saved);
+    return Right(saved);
   }
 
   @override

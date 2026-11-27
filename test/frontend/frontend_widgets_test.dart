@@ -68,6 +68,12 @@ class _RetryInventory extends PreviewRepository {
   }
 }
 
+class _FailingCatalog extends PreviewRepository {
+  @override
+  FutureEither<Product> saveProduct(Product product) async =>
+      const Left(ServerFailure(message: 'SKU đã tồn tại.'));
+}
+
 void main() {
   for (final width in [390.0, 1440.0]) {
     testWidgets(
@@ -251,6 +257,36 @@ void main() {
     expect(repository.products.last.name, 'Vật tư mới');
     expect(find.byType(InventoryEditDialog), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+  testWidgets('manager can edit; failed save keeps entered product fields', (
+    tester,
+  ) async {
+    final repository = _FailingCatalog();
+    addTearDown(repository.dispose);
+    await repository.signIn(email: 'manager@preview.local', password: 'test');
+    await tester.pumpWidget(harness(repository, const ProductListScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Thêm'));
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextFormField);
+    for (final entry in [
+      'Vật tư lỗi',
+      'DUP-001',
+      'DUP-BAR',
+      'cái',
+      '5',
+    ].indexed) {
+      await tester.enterText(fields.at(entry.$1), entry.$2);
+    }
+    await tester.tap(find.text('Lưu'));
+    await tester.pumpAndSettle();
+    expect(find.byType(InventoryEditDialog), findsOneWidget);
+    expect(find.text('SKU đã tồn tại.'), findsOneWidget);
+    expect(
+      tester.widget<TextFormField>(fields.first).controller!.text,
+      'Vật tư lỗi',
+    );
+    expect(repository.products.any((p) => p.sku == 'DUP-001'), isFalse);
   });
   for (final width in [390.0, 1440.0]) {
     testWidgets('product search and inventory form validation at $width', (

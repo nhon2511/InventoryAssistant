@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:smart_wms/core/network/nest_api_client.dart';
 import 'package:smart_wms/core/network/supabase_client_provider.dart';
 import 'package:smart_wms/features/inventory/data/datasources/inventory_remote_datasource.dart';
+import 'package:smart_wms/features/inventory/data/datasources/nest_catalog_datasource.dart';
 import 'package:smart_wms/features/inventory/data/datasources/nest_stock_datasource.dart';
 import 'package:smart_wms/features/inventory/data/repositories/inventory_repository_impl.dart';
 import 'package:smart_wms/features/inventory/domain/entities/inventory_item.dart';
@@ -17,18 +18,25 @@ final inventoryRemoteDataSourceProvider = Provider<InventoryRemoteDataSource>((
   return InventoryRemoteDataSourceImpl(ref.watch(supabaseClientProvider));
 });
 
-final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
+final nestApiClientProvider = Provider<NestApiClient>((ref) {
   final httpClient = http.Client();
   ref.onDispose(httpClient.close);
   final supabase = ref.watch(supabaseClientProvider);
+  return NestApiClient(
+    httpClient,
+    () => supabase.auth.currentSession?.accessToken,
+  );
+});
+
+final nestCatalogDataSourceProvider = Provider<NestCatalogDataSource>(
+  (ref) => NestCatalogDataSource(ref.watch(nestApiClientProvider)),
+);
+
+final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
   return InventoryRepositoryImpl(
     ref.watch(inventoryRemoteDataSourceProvider),
-    stockDataSource: NestStockDataSource(
-      NestApiClient(
-        httpClient,
-        () => supabase.auth.currentSession?.accessToken,
-      ),
-    ),
+    stockDataSource: NestStockDataSource(ref.watch(nestApiClientProvider)),
+    catalogDataSource: ref.watch(nestCatalogDataSourceProvider),
   );
 });
 

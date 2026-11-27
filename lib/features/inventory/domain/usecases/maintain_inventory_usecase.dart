@@ -11,9 +11,9 @@ class MaintainInventoryUseCase {
   final InventoryMaintenanceRepository repository;
 
   FutureEither<Product> saveProduct(Product product, UserRole role) async {
-    if (!role.isAdmin) {
+    if (!role.isManagerOrAbove) {
       return const Left(
-        ServerFailure(message: 'Chỉ Admin được quản lý sản phẩm.'),
+        ServerFailure(message: 'Chỉ Admin hoặc Manager được quản lý sản phẩm.'),
       );
     }
     if ([
@@ -37,9 +37,9 @@ class MaintainInventoryUseCase {
       : const Left(ServerFailure(message: 'Chỉ Admin được xóa sản phẩm.'));
 
   FutureEither<Location> saveLocation(Location location, UserRole role) async {
-    if (!role.isAdmin) {
+    if (!role.isManagerOrAbove) {
       return const Left(
-        ServerFailure(message: 'Chỉ Admin được quản lý vị trí.'),
+        ServerFailure(message: 'Chỉ Admin hoặc Manager được quản lý vị trí.'),
       );
     }
     if ([

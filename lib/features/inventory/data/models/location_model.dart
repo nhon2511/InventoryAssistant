@@ -25,6 +25,35 @@ class LocationModel {
     );
   }
 
+  factory LocationModel.fromNestJson(Map<String, dynamic> json) {
+    final capacity = json['maxCapacityKg'];
+    final parsedCapacity = capacity == null
+        ? null
+        : capacity is num
+        ? capacity.toDouble()
+        : double.tryParse(capacity.toString());
+    if (json['id'] is! String ||
+        json['zoneCode'] is! String ||
+        json['aisleCode'] is! String ||
+        json['rackCode'] is! String ||
+        json['binCode'] is! String ||
+        json['locationBarcode'] is! String ||
+        (capacity != null && parsedCapacity == null) ||
+        (json['createdAt'] != null && json['createdAt'] is! String)) {
+      throw const FormatException('Invalid location');
+    }
+    return LocationModel(
+      id: json['id'] as String,
+      zoneCode: json['zoneCode'] as String,
+      aisleCode: json['aisleCode'] as String,
+      rackCode: json['rackCode'] as String,
+      binCode: json['binCode'] as String,
+      locationBarcode: json['locationBarcode'] as String,
+      maxCapacityKg: parsedCapacity,
+      createdAt: json['createdAt'] as String?,
+    );
+  }
+
   final String id;
   final String zoneCode;
   final String aisleCode;
