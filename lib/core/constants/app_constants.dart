@@ -25,7 +25,7 @@ abstract final class AppConstants {
   // ── NestJS Backend Base URL ───────────────────────────────────────
   /// Change to your server IP/domain in production.
   static const String nestJsBaseUrl = 'http://10.0.2.2:3000/api/v1';
-  static const String nestJsPath = '/ai';
+  static const String nestJsAiPath = '/ai';
 
   // ── Order Code Prefixes ───────────────────────────────────────────
   static const String inboundPrefix = 'INB';
