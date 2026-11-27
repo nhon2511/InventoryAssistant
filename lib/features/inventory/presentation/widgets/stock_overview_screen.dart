@@ -95,6 +95,9 @@ class _StockOverviewScreenState extends ConsumerState<StockOverviewScreen> {
                       ),
                     ],
                   ),
+                  const Text(
+                    'Tồn kho tải từ NestJS. Realtime chưa được xác minh; dùng Tải lại tồn kho để lấy snapshot mới.',
+                  ),
                   _OverviewSummary(
                     distinctProducts: distinct,
                     lowStockProducts: report.lowStock.length,
