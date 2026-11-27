@@ -22,6 +22,11 @@ abstract final class AppConstants {
   static const String queryStockFunction = 'query-stock';
   static const String createDraftOrderFunction = 'create-draft-order';
 
+  // ── NestJS Backend Base URL ───────────────────────────────────────
+  /// Change to your server IP/domain in production.
+  static const String nestJsBaseUrl = 'http://10.0.2.2:3000/api/v1';
+  static const String nestJsPath = '/ai';
+
   // ── Order Code Prefixes ───────────────────────────────────────────
   static const String inboundPrefix = 'INB';
   static const String outboundPrefix = 'OUT';
