@@ -6,7 +6,7 @@ import 'package:smart_wms/core/errors/exceptions.dart';
 
 /// Remote data source for AI assistant that calls the NestJS backend.
 ///
-/// Replace [AiRemoteDataSourceImpl] (Supabase Edge Functions) with this
+/// Replace `AiRemoteDataSourceImpl` (Supabase Edge Functions) with this
 /// when the NestJS /api/v1/ai endpoints are live.
 class NestJsAiDataSource {
   const NestJsAiDataSource({required this.accessToken});
