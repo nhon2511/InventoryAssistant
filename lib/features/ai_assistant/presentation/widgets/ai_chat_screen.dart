@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_wms/core/di/ai_assistant_providers.dart';
 import 'package:smart_wms/features/ai_assistant/domain/entities/chat_message.dart';
@@ -36,6 +37,8 @@ class AiChatScreen extends HookConsumerWidget {
       return null;
     }, [chatState.pendingDraft]);
 
+    useEffect(() => speechService.cancelListening, [speechService]);
+
     Future<void> toggleListening() async {
       if (isListeningState.value) {
         await speechService.stopListening();
@@ -56,16 +59,11 @@ class AiChatScreen extends HookConsumerWidget {
             textController.text = result.recognizedWords;
             if (result.finalResult) {
               isListeningState.value = false;
-              if (textController.text.trim().isNotEmpty) {
-                ref.read(aiChatControllerProvider.notifier).sendMessage(textController.text);
-                textController.clear();
-              }
             }
           },
         );
       }
     }
-
 
     return Scaffold(
       appBar: AppBar(
@@ -73,12 +71,19 @@ class AiChatScreen extends HookConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            onPressed: () => ref.read(aiChatControllerProvider.notifier).clearChat(),
+            onPressed: () =>
+                ref.read(aiChatControllerProvider.notifier).clearChat(),
           ),
         ],
       ),
       body: Column(
         children: [
+          const Padding(
+            padding: EdgeInsets.all(8),
+            child: Text(
+              'Trợ lý AI tạm chưa khả dụng. Giọng nói chỉ điền văn bản; bạn có thể bấm Gửi khi dịch vụ sẵn sàng.',
+            ),
+          ),
           Expanded(
             child: chatState.messages.isEmpty
                 ? const _EmptyChat()
@@ -86,7 +91,8 @@ class AiChatScreen extends HookConsumerWidget {
                     controller: scrollController,
                     padding: const EdgeInsets.all(16),
                     itemCount: chatState.messages.length,
-                    itemBuilder: (context, index) => _ChatBubble(message: chatState.messages[index]),
+                    itemBuilder: (context, index) =>
+                        _ChatBubble(message: chatState.messages[index]),
                   ),
           ),
           if (chatState.isProcessing) const LinearProgressIndicator(),
@@ -126,20 +132,26 @@ class AiChatScreen extends HookConsumerWidget {
                     controller: textController,
                     decoration: InputDecoration(
                       hintText: 'Hỏi tồn kho hoặc tạo phiếu...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     onSubmitted: (text) => _sendMessage(ref, textController),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
-                  onPressed: chatState.isProcessing ? null : () => _sendMessage(ref, textController),
+                  onPressed: chatState.isProcessing
+                      ? null
+                      : () => _sendMessage(ref, textController),
                   icon: const Icon(Icons.send),
                 ),
               ],
-            ),                
-              
+            ),
           ),
         ],
       ),
@@ -154,7 +166,12 @@ class AiChatScreen extends HookConsumerWidget {
     }
   }
 
-  void _showDraftPreviewSheet(BuildContext context, WidgetRef ref, OrderDraft draft) {
+  void _showDraftPreviewSheet(
+    BuildContext context,
+    WidgetRef ref,
+    OrderDraft draft,
+  ) {
+    final parentContext = context;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -173,11 +190,16 @@ class AiChatScreen extends HookConsumerWidget {
               children: [
                 Icon(draft.isInbound ? Icons.input : Icons.output),
                 const SizedBox(width: 8),
-                Text('Xác nhận ', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Xác nhận ',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ],
             ),
             const SizedBox(height: 8),
-            const Text('Vui lòng kiểm tra lại phiếu nháp trước khi lưu.'),
+            const Text(
+              'Đây chỉ là gợi ý. Cần kiểm tra sản phẩm, vị trí và số lượng trong form trước khi lưu.',
+            ),
             const SizedBox(height: 16),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 200),
@@ -189,8 +211,12 @@ class AiChatScreen extends HookConsumerWidget {
                   return Card(
                     child: ListTile(
                       title: Text(item.productName),
-                      subtitle: const Text('SKU: N/A'),
-                      trailing: const Text('Số lượng'),
+                      subtitle: Text(
+                        item.sku == null
+                            ? 'Chưa có SKU xác thực'
+                            : 'SKU gợi ý: ${item.sku}',
+                      ),
+                      trailing: Text('${item.quantity}'),
                     ),
                   );
                 },
@@ -212,12 +238,14 @@ class AiChatScreen extends HookConsumerWidget {
                   onPressed: () {
                     ref.read(aiChatControllerProvider.notifier).clearDraft();
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Đã lưu phiếu thành công!')),
-                    );
+                    if (parentContext.mounted) {
+                      parentContext.go(
+                        draft.isInbound ? '/inbound/new' : '/outbound/new',
+                      );
+                    }
                   },
-                  icon: const Icon(Icons.check),
-                  label: const Text('Xác nhận lưu'),
+                  icon: const Icon(Icons.edit_note),
+                  label: const Text('Mở form để kiểm tra'),
                 ),
               ],
             ),
@@ -234,7 +262,12 @@ class _EmptyChat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Xin chào! Hãy hỏi tôi về tồn kho hoặc tạo phiếu nhé!', textAlign: TextAlign.center));
+    return const Center(
+      child: Text(
+        'Xin chào! Hãy hỏi tôi về tồn kho hoặc tạo phiếu nhé!',
+        textAlign: TextAlign.center,
+      ),
+    );
   }
 }
 
@@ -253,9 +286,13 @@ class _ChatBubble extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.75),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.75,
+        ),
         decoration: BoxDecoration(
-          color: isUser ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest,
+          color: isUser
+              ? colorScheme.primaryContainer
+              : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(message.content),

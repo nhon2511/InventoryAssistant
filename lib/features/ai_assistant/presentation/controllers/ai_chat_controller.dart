@@ -165,6 +165,7 @@ class AiChatController extends _$AiChatController {
 
   String _localizedFailure(Failure failure) {
     if (failure is AiFailure) {
+      if (failure.statusCode == 503) return failure.message;
       return 'Không thể xử lý yêu cầu AI. Vui lòng thử lại.';
     }
     return failure.message;

@@ -9,6 +9,25 @@ abstract class AiRemoteDataSource {
   Future<Map<String, dynamic>> createDraftOrder(Map<String, String> entities);
 }
 
+/// Production guard until Edge Function source, deployment and JWT contract are verified.
+class UnavailableAiRemoteDataSource implements AiRemoteDataSource {
+  const UnavailableAiRemoteDataSource();
+
+  static const message = 'Trợ lý AI hiện chưa khả dụng. Vui lòng thử lại sau.';
+
+  @override
+  Future<Map<String, dynamic>> parseIntent(String userText) =>
+      Future.error(const AiException(message: message, statusCode: 503));
+
+  @override
+  Future<String> queryStock(Map<String, String> entities) =>
+      Future.error(const AiException(message: message, statusCode: 503));
+
+  @override
+  Future<Map<String, dynamic>> createDraftOrder(Map<String, String> entities) =>
+      Future.error(const AiException(message: message, statusCode: 503));
+}
+
 class AiRemoteDataSourceImpl implements AiRemoteDataSource {
   const AiRemoteDataSourceImpl(this._client);
 

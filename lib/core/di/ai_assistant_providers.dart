@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:smart_wms/core/network/supabase_client_provider.dart';
 import 'package:smart_wms/core/services/speech_service.dart';
 import 'package:smart_wms/features/ai_assistant/data/datasources/ai_remote_datasource.dart';
 import 'package:smart_wms/features/ai_assistant/data/repositories/ai_assistant_repository_impl.dart';
@@ -9,7 +8,7 @@ import 'package:smart_wms/features/ai_assistant/domain/usecases/parse_intent_use
 import 'package:smart_wms/features/ai_assistant/domain/usecases/query_stock_usecase.dart';
 
 final aiRemoteDataSourceProvider = Provider<AiRemoteDataSource>((ref) {
-  return AiRemoteDataSourceImpl(ref.watch(supabaseClientProvider));
+  return const UnavailableAiRemoteDataSource();
 });
 
 final aiAssistantRepositoryProvider = Provider<AiAssistantRepository>((ref) {
@@ -24,8 +23,9 @@ final queryStockUseCaseProvider = Provider<QueryStockUseCase>((ref) {
   return QueryStockUseCase(ref.watch(aiAssistantRepositoryProvider));
 });
 
-final createDraftOrderUseCaseProvider =
-    Provider<CreateDraftOrderUseCase>((ref) {
+final createDraftOrderUseCaseProvider = Provider<CreateDraftOrderUseCase>((
+  ref,
+) {
   return CreateDraftOrderUseCase(ref.watch(aiAssistantRepositoryProvider));
 });
 
