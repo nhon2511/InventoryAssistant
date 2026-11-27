@@ -1,16 +1,33 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  ArrayMinSize,
+  IsArray,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsString,
   IsUUID,
   MaxLength,
+  Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 
 export enum ConfirmationTypeDto {
   INBOUND = 'INBOUND',
   OUTBOUND = 'OUTBOUND',
+}
+
+export class ConfirmOrderLineDto {
+  @ApiProperty({ description: 'UUID của dòng phiếu' })
+  @IsUUID('all')
+  lineId!: string;
+
+  @ApiProperty({ description: 'Số lượng thực tế, từ 1 đến số lượng dự kiến' })
+  @IsInt()
+  @Min(1)
+  actualQuantity!: number;
 }
 
 export class ConfirmOrderDto {
@@ -26,8 +43,8 @@ export class ConfirmOrderDto {
 
   @ApiProperty({
     description:
-      'Idempotency key đảm bảo yêu cầu không bị xử lý trùng lặp. '
-      + 'Client tạo UUID v4 duy nhất cho mỗi lần xác nhận.',
+      'Idempotency key đảm bảo yêu cầu không bị xử lý trùng lặp. ' +
+      'Client tạo UUID v4 duy nhất cho mỗi lần xác nhận.',
     example: '550e8400-e29b-41d4-a716-446655440000',
     minLength: 1,
     maxLength: 200,
@@ -37,6 +54,13 @@ export class ConfirmOrderDto {
   @MinLength(1)
   @MaxLength(200)
   idempotencyKey!: string;
+
+  @ApiProperty({ type: [ConfirmOrderLineDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ConfirmOrderLineDto)
+  lines!: ConfirmOrderLineDto[];
 }
 
 export class ConfirmOrderParamsDto {

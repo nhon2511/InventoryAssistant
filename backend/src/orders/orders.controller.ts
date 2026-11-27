@@ -1,11 +1,13 @@
 import {
   Body,
   ConflictException,
+  ForbiddenException,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
   InternalServerErrorException,
+  NotFoundException,
   Param,
   Post,
   Query,
@@ -200,24 +202,25 @@ export class OrdersController {
         orderId: params.orderId,
         type: body.type,
         idempotencyKey: body.idempotencyKey,
+        lines: body.lines,
       });
     } catch (error) {
       // Map domain errors to HTTP status codes.
       const message =
         error instanceof Error ? error.message : 'Confirmation failed';
-      if (
-        message.includes('Order not found') ||
-        message.includes('ownership mismatch')
-      ) {
-        throw new ConflictException(message);
-      }
+      if (message.includes('Order not found'))
+        throw new NotFoundException(message);
+      if (message.includes('ownership mismatch'))
+        throw new ForbiddenException(message);
       if (
         message.includes('cannot be confirmed') ||
         message.includes('Invalid') ||
         message.includes('no lines') ||
         message.includes('Missing or ambiguous') ||
         message.includes('identity mismatch') ||
-        message.includes('Insufficient')
+        message.includes('Insufficient') ||
+        message.includes('Actual quantit') ||
+        message.includes('Order line state changed')
       ) {
         throw new ConflictException(message);
       }

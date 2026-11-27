@@ -1,6 +1,9 @@
 import { Prisma } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service.js';
-import { isRetryableTransactionError, PrismaInventoryTransactionPort } from './prisma-inventory-transaction.adapter.js';
+import {
+  isRetryableTransactionError,
+  PrismaInventoryTransactionPort,
+} from './prisma-inventory-transaction.adapter.js';
 import type {
   ConfirmationLine,
   ConfirmationType,
@@ -10,7 +13,10 @@ import type {
   OrderConfirmationRunner,
 } from './order-confirmation.service.js';
 
-class PrismaOrderConfirmationPort extends PrismaInventoryTransactionPort implements OrderConfirmationPort {
+class PrismaOrderConfirmationPort
+  extends PrismaInventoryTransactionPort
+  implements OrderConfirmationPort
+{
   async lockOrder(id: string): Promise<LockedOrder> {
     const rows = await this.tx.$queryRaw<LockedOrder[]>`
       SELECT id, type, status, created_by AS "createdBy"
@@ -30,7 +36,23 @@ class PrismaOrderConfirmationPort extends PrismaInventoryTransactionPort impleme
     `;
   }
 
-  async lockInventoryByIdentity(productId: string, locationId: string, lotNumber: string | null): Promise<MatchedInventory[]> {
+  async updateActualQuantity(
+    orderId: string,
+    lineId: string,
+    quantity: number,
+  ): Promise<void> {
+    const result = await this.tx.warehouseOrderItem.updateMany({
+      where: { id: lineId, orderId, order: { status: 'CONFIRMED' } },
+      data: { actualQuantity: quantity },
+    });
+    if (result.count !== 1) throw new Error('Order line state changed');
+  }
+
+  async lockInventoryByIdentity(
+    productId: string,
+    locationId: string,
+    lotNumber: string | null,
+  ): Promise<MatchedInventory[]> {
     return this.tx.$queryRaw<MatchedInventory[]>`
       SELECT id, product_id AS "productId", location_id AS "locationId",
              lot_number AS "lotNumber", expiry_date AS "expiryDate",
@@ -44,26 +66,37 @@ class PrismaOrderConfirmationPort extends PrismaInventoryTransactionPort impleme
 
   async completeOrder(id: string, type: ConfirmationType): Promise<void> {
     const result = await this.tx.warehouseOrder.updateMany({
-      where: { id, type, status: 'CONFIRMED' }, data: { status: 'COMPLETED' },
+      where: { id, type, status: 'CONFIRMED' },
+      data: { status: 'COMPLETED' },
     });
     if (result.count !== 1) throw new Error('Order state changed');
   }
 }
 
-// Not registered in AppModule; requires separately approved migration and DB role.
+// Registered through OrdersModule; requires compatible deployed tables and DB role.
 export class PrismaOrderConfirmationAdapter implements OrderConfirmationRunner {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    private readonly sleep: (ms: number) => Promise<void> = (ms) =>
+      new Promise((resolve) => setTimeout(resolve, ms)),
   ) {}
 
-  async transaction<T>(work: (tx: OrderConfirmationPort) => Promise<T>): Promise<T> {
+  async transaction<T>(
+    work: (tx: OrderConfirmationPort) => Promise<T>,
+  ): Promise<T> {
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        return await this.prisma.$transaction(async (tx) => {
-          await tx.$queryRaw`SELECT set_config('lock_timeout', '3s', true)`;
-          return work(new PrismaOrderConfirmationPort(tx));
-        }, { maxWait: 2_000, timeout: 10_000, isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        return await this.prisma.$transaction(
+          async (tx) => {
+            await tx.$queryRaw`SELECT set_config('lock_timeout', '3s', true)`;
+            return work(new PrismaOrderConfirmationPort(tx));
+          },
+          {
+            maxWait: 2_000,
+            timeout: 10_000,
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          },
+        );
       } catch (error) {
         if (attempt === 3 || !isRetryableTransactionError(error)) throw error;
         await this.sleep(25 * attempt);

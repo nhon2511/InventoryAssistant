@@ -42,6 +42,9 @@ const SAMPLE_ORDER = {
   updatedAt: new Date('2026-11-01'),
   _count: { items: 1 },
 };
+const confirmLines = [
+  { lineId: '990e8400-e29b-41d4-a716-446655440001', actualQuantity: 2 },
+];
 
 describe('OrdersController', () => {
   let controller: OrdersController;
@@ -197,7 +200,11 @@ describe('OrdersController', () => {
 
     const response = await controller.confirm(
       { orderId: 'order-1' },
-      { type: ConfirmationTypeDto.INBOUND, idempotencyKey: 'key-1' },
+      {
+        type: ConfirmationTypeDto.INBOUND,
+        idempotencyKey: 'key-1',
+        lines: confirmLines,
+      },
       makeRequest(),
     );
 
@@ -210,6 +217,7 @@ describe('OrdersController', () => {
       orderId: 'order-1',
       type: 'INBOUND',
       idempotencyKey: 'key-1',
+      lines: confirmLines,
     });
   });
 
@@ -223,7 +231,11 @@ describe('OrdersController', () => {
 
     const response = await controller.confirm(
       { orderId: 'order-1' },
-      { type: ConfirmationTypeDto.OUTBOUND, idempotencyKey: 'key-1' },
+      {
+        type: ConfirmationTypeDto.OUTBOUND,
+        idempotencyKey: 'key-1',
+        lines: confirmLines,
+      },
       makeRequest(),
     );
 
@@ -240,7 +252,11 @@ describe('OrdersController', () => {
     await expect(
       controller.confirm(
         { orderId: 'order-1' },
-        { type: ConfirmationTypeDto.INBOUND, idempotencyKey: 'key-1' },
+        {
+          type: ConfirmationTypeDto.INBOUND,
+          idempotencyKey: 'key-1',
+          lines: confirmLines,
+        },
         makeRequest(),
       ),
     ).rejects.toThrow(ConflictException);
@@ -252,7 +268,11 @@ describe('OrdersController', () => {
     await expect(
       controller.confirm(
         { orderId: 'order-1' },
-        { type: ConfirmationTypeDto.INBOUND, idempotencyKey: 'key-1' },
+        {
+          type: ConfirmationTypeDto.INBOUND,
+          idempotencyKey: 'key-1',
+          lines: confirmLines,
+        },
         makeRequest(),
       ),
     ).rejects.toThrow(ConflictException);
@@ -264,22 +284,30 @@ describe('OrdersController', () => {
     await expect(
       controller.confirm(
         { orderId: 'order-1' },
-        { type: ConfirmationTypeDto.INBOUND, idempotencyKey: 'key-1' },
+        {
+          type: ConfirmationTypeDto.INBOUND,
+          idempotencyKey: 'key-1',
+          lines: confirmLines,
+        },
         makeRequest(),
       ),
     ).rejects.toThrow(ConflictException);
   });
 
-  it('throws ConflictException on domain error (order not found)', async () => {
+  it('throws NotFoundException on missing order', async () => {
     confirmSpy.mockRejectedValue(new Error('Order not found'));
 
     await expect(
       controller.confirm(
         { orderId: 'order-1' },
-        { type: ConfirmationTypeDto.INBOUND, idempotencyKey: 'key-1' },
+        {
+          type: ConfirmationTypeDto.INBOUND,
+          idempotencyKey: 'key-1',
+          lines: confirmLines,
+        },
         makeRequest(),
       ),
-    ).rejects.toThrow(ConflictException);
+    ).rejects.toThrow(NotFoundException);
   });
 
   it('throws ConflictException on insufficient stock', async () => {
@@ -288,7 +316,11 @@ describe('OrdersController', () => {
     await expect(
       controller.confirm(
         { orderId: 'order-1' },
-        { type: ConfirmationTypeDto.OUTBOUND, idempotencyKey: 'key-1' },
+        {
+          type: ConfirmationTypeDto.OUTBOUND,
+          idempotencyKey: 'key-1',
+          lines: confirmLines,
+        },
         makeRequest(),
       ),
     ).rejects.toThrow(ConflictException);
@@ -300,7 +332,11 @@ describe('OrdersController', () => {
     await expect(
       controller.confirm(
         { orderId: 'order-1' },
-        { type: ConfirmationTypeDto.INBOUND, idempotencyKey: 'key-1' },
+        {
+          type: ConfirmationTypeDto.INBOUND,
+          idempotencyKey: 'key-1',
+          lines: confirmLines,
+        },
         makeRequest(),
       ),
     ).rejects.toThrow(InternalServerErrorException);
@@ -310,7 +346,11 @@ describe('OrdersController', () => {
     await expect(
       controller.confirm(
         { orderId: 'order-1' },
-        { type: ConfirmationTypeDto.INBOUND, idempotencyKey: 'key-1' },
+        {
+          type: ConfirmationTypeDto.INBOUND,
+          idempotencyKey: 'key-1',
+          lines: confirmLines,
+        },
         makeRequest({ verifiedPrincipal: undefined }),
       ),
     ).rejects.toThrow(InternalServerErrorException);
