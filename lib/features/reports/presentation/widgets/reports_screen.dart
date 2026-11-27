@@ -60,7 +60,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             name: 'bao_cao_kho_$stamp.xlsx',
             mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           ),
-        ]);
+        ]).timeout(const Duration(seconds: 30));
       } else {
         final font = pw.Font.ttf(
           await rootBundle.load('assets/fonts/Roboto-Regular.ttf'),
@@ -70,12 +70,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           await Printing.layoutPdf(
             onLayout: (_) async => bytes,
             name: 'bao_cao_kho_$stamp.pdf',
-          );
+          ).timeout(const Duration(seconds: 30));
         } else {
           await Printing.sharePdf(
             bytes: bytes,
             filename: 'bao_cao_kho_$stamp.pdf',
-          );
+          ).timeout(const Duration(seconds: 30));
         }
       }
     } on Object {

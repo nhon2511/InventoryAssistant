@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:smart_wms/core/di/inventory_providers.dart';
 import 'package:smart_wms/core/enums/order_status.dart';
 import 'package:smart_wms/core/enums/order_type.dart';
+import 'package:smart_wms/core/preview/preview_mode.dart';
 import 'package:smart_wms/core/widgets/async_panel.dart';
 import 'package:smart_wms/core/widgets/workspace_layout.dart';
 import 'package:smart_wms/features/auth/presentation/controllers/auth_controller.dart';
@@ -95,8 +96,10 @@ class _StockOverviewScreenState extends ConsumerState<StockOverviewScreen> {
                       ),
                     ],
                   ),
-                  const Text(
-                    'Tồn kho tải từ NestJS. Realtime chưa được xác minh; dùng Tải lại tồn kho để lấy snapshot mới.',
+                  Text(
+                    ref.watch(frontendPreviewProvider)
+                        ? 'Dữ liệu mẫu trong bộ nhớ. Tải lại để xem snapshot mẫu mới.'
+                        : 'Tồn kho tải từ NestJS. Realtime chưa được xác minh; dùng Tải lại tồn kho để lấy snapshot mới.',
                   ),
                   _OverviewSummary(
                     distinctProducts: distinct,

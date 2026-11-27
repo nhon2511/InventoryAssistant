@@ -32,10 +32,7 @@ void main() {
       expect(find.textContaining('private mock detail'), findsNothing);
       await tester.tap(find.text('Thử lại'));
       await tester.pumpAndSettle();
-      expect(
-        find.textContaining('Realtime chưa được xác minh'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Dữ liệu mẫu trong bộ nhớ'), findsOneWidget);
       await tester.tap(find.byTooltip('Tải lại tồn kho'));
       await tester.pumpAndSettle();
       expect(repository.reads, 3);
