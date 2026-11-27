@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.smartwms.smart_wms"
-    compileSdk = 36
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
