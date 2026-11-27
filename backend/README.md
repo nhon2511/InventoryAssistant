@@ -1,5 +1,7 @@
 # 📦 Smart WMS — Backend Service (NestJS + Prisma + Supabase)
 
+**CP8 (27/11/2026):** Unit, mock E2E, lint, build và Prisma validate/generate chạy offline. Chưa có PostgreSQL/Supabase integration PASS; bảy biến guard của [B7](../docs/audits/TASK-DB-04D_B7_INTEGRATION_READINESS.md) chưa hiện diện trong phiên nghiệm thu. Không dùng hướng dẫn chạy server bên dưới với project production hoặc suy ra schema đã sẵn sàng. `npm run test:db` có harness ghi fixture trong transaction nên không thuộc CP8.
+
 Dịch vụ backend xử lý nghiệp vụ trung tâm cho hệ sinh thái quản lý kho hàng **Smart WMS**, được xây dựng trên nền tảng **NestJS (TypeScript)**, **Prisma ORM** và **Supabase PostgreSQL**.
 
 ---

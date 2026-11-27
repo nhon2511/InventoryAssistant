@@ -1,151 +1,60 @@
-## Bàn giao frontend
+# Smart WMS
 
-Xem [trang bàn giao frontend](docs/FRONTEND_HANDOVER.md) để chạy preview, xem trạng thái từng màn và việc cần tích hợp backend. Kết quả kiểm tra và giới hạn hiện tại nằm tại đó; các số liệu test trong phần README cũ bên dưới là lịch sử, không phải kết quả của nhánh bàn giao.
+Flutter Android/Web dùng Supabase Auth để lấy phiên đăng nhập và gửi Bearer JWT tới NestJS cho danh mục, tồn kho và phiếu nhập/xuất. Xem [kiến trúc](docs/system-architecture.md), [contract](docs/frontend-backend-contracts.md) và [nghiệm thu CP8](docs/audits/CP8_ACCEPTANCE_2026-11-27.md).
 
-<div align="center">
+## Trạng thái kiểm chứng
 
-# 📦 Smart WMS — Inventory Assistant
-### Hệ Thống Quản Lý Kho Hàng Thông Minh Đa Nền Tảng
+- Flutter và NestJS qua test offline, analyze/lint và build Web JavaScript/APK debug. Đây không phải bằng chứng chạy nghiệp vụ trên PostgreSQL thật.
+- Dashboard đọc snapshot từ NestJS và có nút tải lại; Realtime qua Supabase chưa được xác minh với các transaction NestJS.
+- Báo cáo hiển thị tồn hiện tại và header phiếu trong tập API trả về. Không có báo cáo đầu/cuối kỳ hoặc lịch sử biến động theo ledger.
+- Quét barcode điền số lượng thực tế vào form xác nhận; camera thật trên Android/Web chưa được nghiệm thu. OCR ảnh chạy trên Web; Android có nhập LOT/HSD thủ công. LOT/HSD ở phiếu đã duyệt chỉ là preview vì API confirm không lưu hai trường này.
+- AI production trả lỗi chưa khả dụng: source/deployment và quyền của Edge Function chưa được chứng minh. Voice chỉ chuyển tiếng nói thành text, người dùng tự bấm Gửi.
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.47.0-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
-[![Dart](https://img.shields.io/badge/Dart-3.7.0-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
-[![Supabase](https://img.shields.io/badge/Supabase-BaaS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
-[![Riverpod](https://img.shields.io/badge/State_Management-Riverpod_2.6-055399?style=for-the-badge&logo=flutter&logoColor=white)](https://riverpod.dev)
+## Chạy bản xem trước an toàn
 
----
-
-**Smart WMS** là giải pháp quản lý kho hàng thông minh đa nền tảng (Mobile App cho Thủ kho & Web Admin cho Quản lý), kết hợp công nghệ **Backend-as-a-Service (Supabase)**, **On-Device Computer Vision (ML Kit & Barcode Scanning)** và **AI Trợ lý ảo (LLM Edge Functions)** giúp tự động hóa quy trình nhập/xuất kho, giảm tỷ lệ sai sót xuống dưới **< 1%** và tăng tốc độ xử lý phiếu kho lên đến **80%**.
-
-</div>
-
----
-
-## 🚀 Các Tính Năng Nổi Bật (Key Features)
-
-### 1. 📷 Batch Barcode / QR Scanning (Nhập/Xuất Hàng Loạt)
-* **Quét mã siêu tốc**: Hỗ trợ giải mã liên tục các định dạng **EAN-13, EAN-8, Code128, QR Code** thông qua camera di động.
-* **Tự động cộng dồn & Cảnh báo vượt mức**: Hệ thống tự động đếm số lượng, phát âm thanh feedback (BEEP / Haptic) và cảnh báo khi quét vượt số lượng dự kiến.
-
-### 2. 🔍 OCR Text Recognition (Trích Xuất Hạn Sử Dụng & Số Lô)
-* **On-Device OCR (ML Kit)**: Nhận diện trực tiếp ngày sản xuất (`EXP`/`HSD`) và số lô sản xuất (`LOT`/`Batch`) từ bao bì sản phẩm mà không cần kết nối mạng.
-* **Tự động điền dữ liệu**: Khớp chính xác thông tin vào mẫu nhập kho, loại bỏ hoàn toàn việc thao tác bằng tay.
-
-### 3. 🤖 Voice & Text AI Assistant (Trợ Lý Ảo Kho Hàng)
-* **Xử lý Ngôn ngữ Tự nhiên (NLU)**: Phân tích câu lệnh giọng nói/văn bản (ví dụ: *"Kiểm tra tồn kho Mì Hảo Hảo ở kệ A1"*, *"Xuất 50 thùng Nước Aquafina cho đại lý X"*) thành intent và entity bằng **Supabase Edge Functions + LLM (Gemini 1.5 / GPT-4o-mini)**.
-* **Tự động lập bản nháp phiếu**: Tự tạo phiếu xuất/nhập nháp với giao diện kiểm tra **Human-in-the-loop** trước khi lưu vào DB.
-
-### 4. ⚡ Supabase Realtime & Web Admin Dashboard
-* **Đồng bộ thời gian thực (< 500ms)**: Thay đổi tồn kho, trạng thái phiếu nhập/xuất được broadcast tức thì qua WebSocket Secure đến toàn bộ thiết bị.
-* **Web Admin trực quan**: Biểu đồ thống kê biến động kho hàng (thông qua `fl_chart`), quản lý cây vị trí Sơ đồ kho (**Zone -> Rack -> Shelf -> Bin**), phân quyền người dùng (RBAC).
-
----
-
-## 🏗️ Kiến Trúc Phần Mềm (Architecture)
-
-Dự án áp dụng **Clean Architecture** kết hợp phương pháp tổ chức thư mục **Feature-First**:
-
-```
-lib/
-├── app/                        # Cấu hình ứng dụng toàn cục
-│   ├── router/                 # GoRouter routing (Declarative routing)
-│   ├── theme/                  # Color Palette & Material 3 Dynamic Theme
-│   └── app.dart                # MaterialApp.router configuration
-├── bootstrap.dart              # Khởi tạo Supabase SDK, .env, Logger, Orientations
-├── core/                       # Thành phần dùng chung (Core Utilities & Shared UI)
-│   ├── constants/              # AppConstants, Supabase Tables & RPC Names
-│   ├── enums/                  # UserRole, OrderType, OrderStatus
-│   ├── errors/                 # Failures & Exceptions mapping
-│   ├── extensions/             # Context & String Helper Extensions
-│   ├── network/                # Supabase Client Provider & Network Info
-│   ├── usecases/               # Base UseCase<Type, Params> Contract
-│   ├── utils/                  # BarcodeParser, OcrTextExtractor, DateFormatter
-│   └── widgets/                # Reusable Widgets (Loading, Error, ConfirmDialog)
-├── features/                   # Các Module Chức Năng (Feature-First Clean Arch)
-│   ├── ai_assistant/           # Module Trợ Lý AI
-│   ├── auth/                   # Module Xác Thực & Phân Quyền
-│   ├── inbound/                # Module Nhập Kho & OCR / Batch Scanning
-│   ├── inventory/              # Module Tồn Kho & Sơ Đồ Kệ Hàng
-│   └── outbound/               # Module Xuất Kho & Picklist
-└── main.dart                   # Entry point ứng dụng
-```
-
----
-
-## 🛠️ Hướng Dẫn Cài Đặt & Khởi Chạy (Getting Started)
-
-### 1. Yêu Cầu Tiên Quyết
-* **Flutter SDK**: `>= 3.47.0` (Dart SDK `>= 3.7.0`)
-* **Supabase CLI**: Đã cài đặt nếu bạn muốn deploy Edge Functions cục bộ.
-* **Git**: Phiên bản mới nhất.
-
-### 2. Clone Dự Án & Cài Đặt Dependencies
-```bash
-git clone https://github.com/nhon2511/InventoryAssistant.git
-cd InventoryAssistant
-flutter pub get
-```
-
-### 3. Cấu Hình Môi Trường (`.env`)
-Tạo file `.env` tại thư mục gốc của dự án (tham khảo mẫu trong `.env.example`):
-```env
-SUPABASE_URL=https://your-supabase-project.supabase.co
-SUPABASE_ANON_KEY=your-supabase-anon-key
-```
-
-### 4. Tạo Mã Nguồn Tự Động (Code Generation)
-Dự án sử dụng **Riverpod Generator** cho State Management và dependency injection:
-```bash
-flutter pub run build_runner build --delete-conflicting-outputs
-```
-
-### 5. Chạy Ứng Dụng (Run Application)
-* **Mobile (Android/iOS)**:
-  ```bash
-  flutter run
-  ```
-* **Web Admin**:
-  ```bash
-  flutter run -d chrome
-  ```
-
----
-
-## 🧪 Testing & Static Analysis
-
-Dự án duy trì tỷ lệ bao phủ kiểm thử cao cho các Business Logic UseCases và Helper Utilities:
-
-```bash
-# Chạy toàn bộ Unit Tests (26/26 tests passing)
-flutter test
-
-# Kiểm tra Linter / Static Code Analysis (0 Errors, 0 Warnings)
-flutter analyze
-```
-
----
-
-## 🗄️ Supabase Backend & Database Schema
-
-Hệ thống tận dụng tối đa tính năng của **Supabase PostgreSQL**:
-* **Row Level Security (RLS)**: Phân quyền theo vai trò (`ADMIN`, `MANAGER`, `STAFF`).
-* **Stored Procedures (RPC)**:
-  * `confirm_inbound_order`: Tự động cộng tồn kho và ghi nhật ký giao dịch (`inventory_transactions`).
-  * `confirm_outbound_order`: Kiểm tra số lượng tồn kho khả dụng (`quantity_on_hand`) và thực hiện trừ tồn kho an toàn bằng cơ chế khóa dòng (Locking).
-* **Realtime Broadcast**: Lắng nghe sự thay đổi trên bảng `inventory_items` và `warehouse_orders`.
-* **Edge Functions**:
-  * `parse-intent`: Tiếp nhận câu thoại tiếng Việt, trích xuất Intent (`query_stock`, `create_order`) và Entities dưới dạng JSON.
-  * `query-stock`: Thực hiện truy vấn tồn kho thông minh và sinh câu trả lời tự nhiên.
-# CP2: đọc tồn kho qua NestJS
-
-Màn tổng quan tồn kho dùng `GET /api/v1/inventory/stock` với access token của phiên Supabase. Truyền URL của NestJS khi chạy hoặc build (không có URL mặc định):
+Bản preview dùng fixture trong bộ nhớ, không cần Supabase/NestJS. Tài khoản thử: `admin@preview.local`, `manager@preview.local`, `staff@preview.local`; mật khẩu là bất kỳ chuỗi không rỗng. Không dùng kết quả preview làm bằng chứng dữ liệu production.
 
 ```powershell
-# Web trên cùng máy chạy NestJS
-flutter run -d chrome --dart-define=NESTJS_BASE_URL=http://localhost:3000
-# Android emulator; 10.0.2.2 trỏ về host của emulator
-flutter run -d emulator-5554 --dart-define=NESTJS_BASE_URL=http://10.0.2.2:3000
-# Android device; thay host bằng IP LAN/DNS mà điện thoại truy cập được
-flutter run -d <device-id> --dart-define=NESTJS_BASE_URL=https://wms-api.example.com
+flutter pub get
+flutter run -d chrome -t lib/main_preview.dart
 ```
 
-Build release chỉ chấp nhận HTTPS. Android debug cho phép HTTP tới backend local; release không bật cleartext. Web cần backend cho phép origin của ứng dụng qua CORS. Chưa có URL/project test được xác minh trong repo nên cần cấu hình endpoint và tài khoản Supabase phù hợp trước khi kiểm tra dữ liệu thật.
+## Chạy Flutter với backend test/dev riêng
+
+Tạo `.env` cục bộ từ `.env.example`; không commit file này. Chỉ dùng Supabase Auth project đã xác định an toàn và NestJS URL có thể truy cập từ đúng nền tảng. [Hướng dẫn backend](backend/README.md) mô tả phần server. Không dùng project production cho nghiệm thu.
+
+```powershell
+# Web trên cùng máy với NestJS
+flutter run -d chrome --dart-define=NESTJS_BASE_URL=http://localhost:3000
+
+# Android emulator: 10.0.2.2 trỏ tới máy host
+flutter run -d emulator-5554 --dart-define=NESTJS_BASE_URL=http://10.0.2.2:3000
+
+# Android device: thay hostname bằng địa chỉ LAN/DNS truy cập được từ điện thoại
+flutter run -d <device-id> --dart-define=NESTJS_BASE_URL=https://wms-api.example.test
+```
+
+Backend URL release cần HTTPS; Web cần CORS cho origin của app. Build thành công không xác nhận URL, JWT, role, schema hoặc dữ liệu thật.
+
+## Quality gates offline
+
+```powershell
+flutter analyze --no-pub
+flutter test --no-pub
+flutter build web --no-pub
+flutter build apk --debug
+
+Set-Location backend
+npm run prisma:validate
+npm run prisma:generate
+npm test
+npm run test:e2e
+npm run lint
+npm run build
+```
+
+`test:e2e` hiện dùng mock/offline. Không chạy `test:db` khi chưa có test target riêng, đủ guard theo [B7](docs/audits/TASK-DB-04D_B7_INTEGRATION_READINESS.md), schema canonical được duyệt và kế hoạch reset. Các SQL local trong `supabase/` không mặc nhiên là migration chuẩn.
+
+## Demo
+
+Xem [kịch bản demo CP8](docs/audits/CP8_ACCEPTANCE_2026-11-27.md). Demo preview nên tập trung vào login/role, catalog, form nhiều dòng, validation, scan nhập tay, snapshot, lọc ngày báo cáo và thông báo AI chưa khả dụng. Demo giao dịch thật cần project test đã xác minh và một đợt nghiệm thu riêng.
