@@ -1,6 +1,20 @@
 # Bàn giao contract frontend → backend Smart WMS
 
-Cập nhật: 13/10/2026. Đây là yêu cầu adapter/contract, không phải API đã triển khai hoặc schema đề xuất đã được duyệt.
+Cập nhật: 27/11/2026. Các mục CP cũ ghi lại thời điểm kiểm kê tương ứng; chỉ phần CP7 mô tả wiring hiện tại của dashboard, báo cáo và AI.
+
+## CP7 — Nguồn dashboard, báo cáo và AI (27/11/2026)
+
+Đối chiếu mã nguồn; test Flutter dùng mock/fixture. Chưa kết nối DB test, chưa xác minh Supabase Realtime, Edge Function, camera hoặc voice trên thiết bị thật.
+
+| Hiển thị / thao tác | Nguồn production sau CP7 | Giới hạn |
+|---|---|---|
+| Dashboard: SKU có tồn, dưới ngưỡng, tồn thực có theo đơn vị, khả dụng từng sản phẩm/vị trí | `GET /api/v1/products`, `GET /api/v1/inventory/stock` qua repository NestJS; tính cục bộ trên snapshot | Không cộng số lượng khác đơn vị; nút tải lại lấy snapshot mới. Supabase Realtime còn adapter nhưng dashboard không đăng ký vì event từ transaction NestJS chưa được xác minh. |
+| Dashboard: số phiếu nháp | `GET /api/v1/orders` qua order repository; lọc trạng thái DRAFT ở client | Theo quyền/giới hạn list của API; không phải tổng phiếu toàn kho nếu API phân trang hoặc lọc quyền. |
+| Báo cáo: tồn hiện tại, vị trí, đơn vị | Products, locations, stock từ inventory repository NestJS; xuất Excel/PDF từ cùng snapshot | Không hiển thị tồn đầu/cuối kỳ, biến động hoặc tổng nhập/xuất vì chưa có ledger report contract. |
+| Báo cáo: danh sách phiếu | `GET /api/v1/orders` nhập/xuất; lọc `createdAt` cục bộ kể cả ngày kết thúc | Chỉ header và ngày tạo API trả về; lọc trên tập dữ liệu đã tải, chưa bảo đảm đủ mọi trang. |
+| AI query/draft | Slug Edge Function có trong constants nhưng không có source/deployment/contract JWT được kiểm chứng trong repo; production provider trả lỗi chưa khả dụng, không gọi function | Preview fixture chỉ dùng test/preview. Không trả lời tồn như dữ liệu thật, không tự tạo/confirm phiếu. Khi có contract được duyệt cần dùng stock NestJS và form draft có xác nhận. |
+| Voice | Plugin nhận dạng tiếng nói trên client, chỉ điền text | Người dùng bấm Gửi; chưa kiểm tra micro trên Android/Web thật. |
+
 
 ## CP3 — Adapter danh mục Flutter → NestJS (27/11/2026)
 
