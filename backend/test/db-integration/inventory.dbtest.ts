@@ -1,6 +1,9 @@
 import { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PrismaService } from '../../src/prisma/prisma.service.js';
+import { OrdersService } from '../../src/orders/orders.service.js';
+import { OrderTypeEnum } from '../../src/orders/dto/order-query.dto.js';
 import { OrderConfirmationService } from '../../src/inventory-contract/order-confirmation.service.js';
 import { PrismaOrderConfirmationAdapter } from '../../src/inventory-contract/prisma-order-confirmation.adapter.js';
 import { admin, assertLiveTestTarget, backend, fixture, testActorId, withRollback } from './harness.js';
@@ -8,7 +11,10 @@ import { admin, assertLiveTestTarget, backend, fixture, testActorId, withRollbac
 beforeAll(assertLiveTestTarget);
 afterAll(async () => { await Promise.all([admin.$disconnect(), backend.$disconnect()]); });
 
-function serviceOn(tx: Prisma.TransactionClient) {
+function serviceOn(
+  tx: Prisma.TransactionClient,
+  trustedRole: 'ADMIN' | 'MANAGER' | 'STAFF' = 'MANAGER',
+) {
   // Real SQL on an outer rollback-only transaction. This does not exercise a
   // separate committed adapter transaction or backend role connection.
   const proxy = { $transaction: async (work: (client: Prisma.TransactionClient) => Promise<unknown>) => work(tx) };
@@ -17,12 +23,89 @@ function serviceOn(tx: Prisma.TransactionClient) {
     verifyAccessToken: async () => ({
       subjectId: testActorId, scopeId: testActorId,
       issuer: 'https://isolated-test.supabase.co/auth/v1', audience: 'authenticated',
-      authorizationSource: 'verified-jwt', trustedRole: 'STAFF',
+      authorizationSource: 'verified-jwt', trustedRole,
     }),
   });
 }
 
+function ordersServiceOn(tx: Prisma.TransactionClient) {
+  // Keep create/review inside the outer rollback-only fixture transaction.
+  const prisma = new Proxy(tx, {
+    get(target, property) {
+      if (property === '$transaction') {
+        return async (work: (client: Prisma.TransactionClient) => Promise<unknown>) => work(tx);
+      }
+      return Reflect.get(target, property, target);
+    },
+  });
+  return new OrdersService(prisma as unknown as PrismaService);
+}
+
+function confirmationInput(
+  f: Awaited<ReturnType<typeof fixture>>,
+  type: 'INBOUND' | 'OUTBOUND' = 'OUTBOUND',
+  idempotencyKey = `CP5-${f.order.id}`,
+  actualQuantity = 3,
+) {
+  return {
+    orderId: f.order.id,
+    type,
+    idempotencyKey,
+    lines: [{ lineId: f.line.id, actualQuantity }],
+  };
+}
+
 describe('real PostgreSQL in rollback-only isolated test target', () => {
+  it('creates a multi-line draft, reviews it, records actuals, and replays once', async () => {
+    await withRollback(async (tx) => {
+      const first = await fixture(tx);
+      const secondProduct = await tx.product.create({ data: {
+        sku: `CP5-${randomUUID().slice(0, 8)}`,
+        barcode: `CP5-BC-${randomUUID().slice(0, 8)}`,
+        name: 'CP5 demo second product',
+      } });
+      const secondLocation = await tx.location.create({ data: {
+        zoneCode: 'CP5', aisleCode: 'A002', rackCode: 'R1', binCode: 'B2',
+        locationBarcode: `CP5-LOC-${randomUUID().slice(0, 8)}`,
+      } });
+      const secondInventory = await tx.inventoryItem.create({ data: {
+        productId: secondProduct.id, locationId: secondLocation.id,
+        quantityOnHand: 8, quantityReserved: 1, lotNumber: 'CP5-DEMO-LOT-2',
+      } });
+      const orders = ordersServiceOn(tx);
+      const draft = await orders.createDraft({
+        type: OrderTypeEnum.OUTBOUND,
+        requestId: randomUUID(),
+        items: [
+          { productId: first.product.id, locationId: first.location.id, expectedQuantity: 4, lotNumber: first.inventory.lotNumber! },
+          { productId: secondProduct.id, locationId: secondLocation.id, expectedQuantity: 3, lotNumber: secondInventory.lotNumber! },
+        ],
+      }, testActorId);
+      expect(draft.status).toBe('DRAFT');
+      expect(draft.items).toHaveLength(2);
+
+      const reviewed = await orders.reviewOrder(draft.id, true, testActorId);
+      expect(reviewed).toMatchObject({ status: 'CONFIRMED', approvedBy: testActorId });
+      const lines = reviewed.items.map((line, index) => ({
+        lineId: line.id,
+        actualQuantity: index === 0 ? 2 : 3,
+      }));
+      const service = serviceOn(tx);
+      const command = {
+        orderId: draft.id,
+        type: 'OUTBOUND' as const,
+        idempotencyKey: `CP5-${draft.id}`,
+        lines,
+      };
+
+      expect(await service.confirm('test-token', command)).toMatchObject({ kind: 'applied', movements: 2 });
+      expect(await service.confirm('test-token', command)).toMatchObject({ kind: 'replay', movements: 2 });
+      expect(await tx.stockLedger.count({ where: { orderId: draft.id } })).toBe(2);
+      expect((await tx.inventoryItem.findUniqueOrThrow({ where: { id: first.inventory.id } })).quantityOnHand).toBe(8);
+      expect((await tx.inventoryItem.findUniqueOrThrow({ where: { id: secondInventory.id } })).quantityOnHand).toBe(5);
+    });
+  });
+
   it('requires candidate schema, FK/CHECK, append-only trigger and RLS catalog objects', async () => {
     await withRollback(async (tx) => {
       const rows = await tx.$queryRaw<Array<{ name: string; rls: boolean }>>`
@@ -50,7 +133,7 @@ describe('real PostgreSQL in rollback-only isolated test target', () => {
     await withRollback(async (tx) => {
       const f = await fixture(tx);
       const service = serviceOn(tx);
-      const command = { orderId: f.order.id, type: 'OUTBOUND' as const, idempotencyKey: `B7-${f.order.id}` };
+      const command = confirmationInput(f);
       expect((await service.confirm('test-token', command)).kind).toBe('applied');
       const item = await tx.inventoryItem.findUniqueOrThrow({ where: { id: f.inventory.id } });
       expect(item.quantityOnHand).toBe(7);
@@ -59,7 +142,11 @@ describe('real PostgreSQL in rollback-only isolated test target', () => {
       expect(ledger[0]).toMatchObject({ inventoryItemId: f.inventory.id, delta: -3, balance: 7 });
       expect((await service.confirm('test-token', command)).kind).toBe('replay');
       expect(await tx.stockLedger.count({ where: { orderId: f.order.id } })).toBe(1);
-      await expect(service.confirm('test-token', { ...command, idempotencyKey: `B7-other-${f.order.id}` }))
+      await expect(service.confirm('test-token', {
+        ...command,
+        lines: [{ lineId: f.line.id, actualQuantity: 2 }],
+      })).resolves.toMatchObject({ kind: 'conflict' });
+      await expect(service.confirm('test-token', { ...command, idempotencyKey: `CP5-other-${f.order.id}` }))
         .rejects.toThrow('Order cannot be confirmed');
       await expect(service.confirm('test-token', { ...command, type: 'INBOUND' }))
         .resolves.toMatchObject({ kind: 'conflict' });
@@ -69,9 +156,7 @@ describe('real PostgreSQL in rollback-only isolated test target', () => {
   it('confirms inbound against an existing exact inventory identity', async () => {
     await withRollback(async (tx) => {
       const f = await fixture(tx, 'INBOUND');
-      const result = await serviceOn(tx).confirm('test-token', {
-        orderId: f.order.id, type: 'INBOUND', idempotencyKey: `B7-${f.order.id}`,
-      });
+      const result = await serviceOn(tx).confirm('test-token', confirmationInput(f, 'INBOUND'));
       expect(result.kind).toBe('applied');
       expect((await tx.inventoryItem.findUniqueOrThrow({ where: { id: f.inventory.id } })).quantityOnHand).toBe(13);
       expect(await tx.stockLedger.findMany({ where: { orderId: f.order.id }, select: { delta: true, balance: true } }))
@@ -82,12 +167,25 @@ describe('real PostgreSQL in rollback-only isolated test target', () => {
   it('rejects insufficient available stock before stock/ledger writes', async () => {
     await withRollback(async (tx) => {
       const f = await fixture(tx);
-      await tx.warehouseOrderItem.update({ where: { id: f.line.id }, data: { actualQuantity: 9 } });
+      await tx.warehouseOrderItem.update({ where: { id: f.line.id }, data: { expectedQuantity: 12 } });
       const service = serviceOn(tx);
-      await expect(service.confirm('test-token', {
-        orderId: f.order.id, type: 'OUTBOUND', idempotencyKey: `B7-${f.order.id}`,
-      })).rejects.toThrow('Insufficient available stock');
+      await expect(service.confirm('test-token', confirmationInput(f, 'OUTBOUND', undefined, 9)))
+        .rejects.toThrow('Insufficient available stock');
       expect((await tx.inventoryItem.findUniqueOrThrow({ where: { id: f.inventory.id } })).quantityOnHand).toBe(10);
+      expect(await tx.stockLedger.count({ where: { orderId: f.order.id } })).toBe(0);
+    });
+  });
+
+  it('rejects confirmation for DRAFT and CANCELLED orders', async () => {
+    await withRollback(async (tx) => {
+      const f = await fixture(tx);
+      const service = serviceOn(tx);
+      await tx.warehouseOrder.update({ where: { id: f.order.id }, data: { status: 'DRAFT' } });
+      await expect(service.confirm('test-token', confirmationInput(f)))
+        .rejects.toThrow('Order cannot be confirmed');
+      await tx.warehouseOrder.update({ where: { id: f.order.id }, data: { status: 'CANCELLED' } });
+      await expect(service.confirm('test-token', confirmationInput(f, 'OUTBOUND', `CP5-cancelled-${f.order.id}`)))
+        .rejects.toThrow('Order cannot be confirmed');
       expect(await tx.stockLedger.count({ where: { orderId: f.order.id } })).toBe(0);
     });
   });
@@ -121,9 +219,8 @@ describe('real PostgreSQL in rollback-only isolated test target', () => {
         productId: f.product.id, locationId: f.location.id, lotNumber: null,
         quantityOnHand: 0, quantityReserved: 0,
       } });
-      await expect(serviceOn(tx).confirm('test-token', {
-        orderId: f.order.id, type: 'INBOUND', idempotencyKey: `B7-${f.order.id}`,
-      })).rejects.toThrow('Missing or ambiguous inventory identity');
+      await expect(serviceOn(tx).confirm('test-token', confirmationInput(f, 'INBOUND')))
+        .rejects.toThrow('Missing or ambiguous inventory identity');
     });
   });
 
@@ -136,6 +233,15 @@ describe('real PostgreSQL in rollback-only isolated test target', () => {
       } });
       await tx.stockLedger.update({ where: { id: ledger.id }, data: { balance: 12 } });
     })).rejects.toThrow();
+  });
+
+  it('rejects an untrusted STAFF role before stock or ledger writes', async () => {
+    await withRollback(async (tx) => {
+      const f = await fixture(tx);
+      await expect(serviceOn(tx, 'STAFF').confirm('test-token', confirmationInput(f)))
+        .rejects.toThrow('Trusted confirmation authority is unavailable');
+      expect(await tx.stockLedger.count({ where: { orderId: f.order.id } })).toBe(0);
+    });
   });
 
   it('checks client ACL and actual backend role without changing database grants', async () => {

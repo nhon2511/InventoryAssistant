@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { OrdersService } from '../../src/orders/orders.service.js';
+import { OrderTypeEnum } from '../../src/orders/dto/order-query.dto.js';
+import type { PrismaService } from '../../src/prisma/prisma.service.js';
 import { assertDbTestTarget } from './target.js';
 
 const target = assertDbTestTarget(process.env);
@@ -69,12 +72,29 @@ export async function fixture(tx: Prisma.TransactionClient, type: 'INBOUND' | 'O
     productId: product.id, locationId: location.id, quantityOnHand: 10,
     quantityReserved: 2, lotNumber: `B7-${suffix}`,
   } });
-  const order = await tx.warehouseOrder.create({ data: {
-    orderCode: `B7-${suffix}`, type, status: 'DRAFT', createdBy: testActorId,
-  } });
-  const line = await tx.warehouseOrderItem.create({ data: {
-    orderId: order.id, productId: product.id, locationId: location.id,
-    expectedQuantity: 3, actualQuantity: 3, lotNumber: inventory.lotNumber,
-  } });
+  // Route the fixture through the same createDraft and reviewOrder domain
+  // service methods as the CP5 API, while pinning nested transactions to this
+  // outer transaction so cleanup remains rollback-only.
+  const prisma = new Proxy(tx, {
+    get(target, property) {
+      if (property === '$transaction') {
+        return async (work: (client: Prisma.TransactionClient) => Promise<unknown>) => work(tx);
+      }
+      return Reflect.get(target, property, target);
+    },
+  });
+  const orders = new OrdersService(prisma as unknown as PrismaService);
+  const draft = await orders.createDraft({
+    type: type === 'INBOUND' ? OrderTypeEnum.INBOUND : OrderTypeEnum.OUTBOUND,
+    requestId: randomUUID(),
+    items: [{
+      productId: product.id,
+      locationId: location.id,
+      expectedQuantity: 3,
+      lotNumber: inventory.lotNumber ?? undefined,
+    }],
+  }, testActorId);
+  const order = await orders.reviewOrder(draft.id, true, testActorId);
+  const line = order.items[0];
   return { product, location, inventory, order, line };
 }
